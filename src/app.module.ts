@@ -3,9 +3,9 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-// import { UsersModule } from './users/users.module';
-// import { NotificationsModule } from './notifications/notifications.module';
-// import { BusApiModule } from './busapi/busapi.module';
+import { BusApiModule } from './busapi/busapi.module';
+import { UsersModule } from './users/user.module';
+import { NotificationsModule } from './notifications/notification.module';
 
 @Module({
   imports: [
@@ -23,6 +23,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         synchronize: true,
       }),
     }),
+    UsersModule,
+    NotificationsModule,
+    BusApiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
