@@ -21,6 +21,7 @@ import { NotificationsModule } from './notifications/notification.module';
         database: cfg.get('DB_NAME'),
         autoLoadEntities: true,
         synchronize: true,
+        logging: true,
       }),
     }),
     UsersModule,
