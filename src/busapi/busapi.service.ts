@@ -11,4 +11,8 @@ export class BusApiService {
     // 타임아웃/재시도도 여기서 처리
     return 12; // placeholder
   }
+
+  async getRemainingStops(busId: string, stopId: string): Promise<number> {
+    return 3; // 예: 3정류장 남음
+  }
 }

@@ -28,7 +28,8 @@ export class CreateNotificationDto {
   @IsNotEmpty()
   stopName: string;
 
-  @IsEnum(['time', 'stops'] as any) notificationType: 'time' | 'stops' = 'time';
+  @IsEnum(['time', 'stops'] as any)
+  notificationType: 'time' | 'stops' = 'time';
 
   @IsOptional()
   @IsInt()

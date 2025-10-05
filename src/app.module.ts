@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { BusApiModule } from './busapi/busapi.module';
 import { UsersModule } from './users/user.module';
 import { NotificationsModule } from './notifications/notification.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { NotificationsModule } from './notifications/notification.module';
         logging: true,
       }),
     }),
+    ScheduleModule.forRoot(),
     UsersModule,
     NotificationsModule,
     BusApiModule,
