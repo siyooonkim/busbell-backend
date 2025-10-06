@@ -45,9 +45,8 @@ export class AuthController {
   // ✅ 토큰 재발급
   @ApiOperation({ summary: 'AccessToken 재발급' })
   @Post('refresh')
-  refresh(@Body() dto: RefreshDto, @Req() req) {
-    // userId는 access 만료 시점이라 헤더에 없을 수도 있음
-    return this.authService.refreshTokens(dto.deviceId, dto.refreshToken);
+  refresh(@Body() dto: RefreshDto) {
+    return this.authService.refreshTokens(dto.refreshToken);
   }
 
   // ✅ 로그아웃

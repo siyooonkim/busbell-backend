@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { UserService } from './user.service';
+import { UpdateFcmDto } from './dtos/user.dto';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -25,8 +26,8 @@ export class UserController {
   // ✅ FCM 토큰 업데이트
   @Patch('fcm-token')
   @UseGuards(JwtAuthGuard)
-  async updateFcm(@Req() req, @Body('fcmToken') fcmToken: string) {
-    return this.usersService.updateFcmToken(req.user.userId, fcmToken);
+  async updateFcm(@Req() req, dto: UpdateFcmDto) {
+    return this.usersService.updateFcmToken(req.user.userId, dto.fcmToken);
   }
 
   // ✅ 회원 탈퇴

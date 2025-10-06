@@ -98,20 +98,33 @@ export class AuthService {
   }
 
   // ✅ Refresh 토큰 재발급
-  async refreshTokens(userId: number, refreshToken: string) {
-    const auth = await this.authRepo.findOne({ where: { userId } });
-    if (!auth || !auth.refreshTokenHash) throw new UnauthorizedException();
+  async refreshTokens(refreshToken: string) {
+    try {
+      // 🔹 JWT 복호화해서 payload 추출
+      const payload = this.jwtService.verify(refreshToken, {
+        secret: process.env.JWT_SECRET || 'busbell-secret',
+      });
 
-    const isValid = await bcrypt.compare(refreshToken, auth.refreshTokenHash);
-    if (!isValid) throw new UnauthorizedException();
+      const { userId, deviceId } = payload;
+      const auth = await this.authRepo.findOne({ where: { userId, deviceId } });
+      if (!auth || !auth.refreshTokenHash) throw new UnauthorizedException();
 
-    const payload = { sub: userId, deviceId: auth.deviceId };
-    const newAccess = this.jwtService.sign(payload, { expiresIn: '1h' });
-    const newRefresh = this.jwtService.sign(payload, { expiresIn: '7d' });
-    auth.refreshTokenHash = await bcrypt.hash(newRefresh, 10);
-    await this.authRepo.save(auth);
+      const isValid = await bcrypt.compare(refreshToken, auth.refreshTokenHash);
+      if (!isValid) throw new UnauthorizedException('Invalid refresh token');
 
-    return { accessToken: newAccess, refreshToken: newRefresh };
+      // 🔹 새 Access / Refresh 발급
+      const newPayload = { userId, deviceId };
+      const newAccess = this.jwtService.sign(newPayload, { expiresIn: '1h' });
+      const newRefresh = this.jwtService.sign(newPayload, { expiresIn: '7d' });
+
+      auth.refreshTokenHash = await bcrypt.hash(newRefresh, 10);
+      auth.refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      await this.authRepo.save(auth);
+
+      return { accessToken: newAccess, refreshToken: newRefresh };
+    } catch (e) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
   }
 
   // ✅ 로그아웃

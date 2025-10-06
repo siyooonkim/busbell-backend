@@ -34,9 +34,6 @@ export class KakaoLoginDto {
 export class RefreshDto {
   @IsString()
   refreshToken: string;
-
-  @IsString()
-  deviceId: string;
 }
 
 // ✅ 5) 로그아웃용
