@@ -11,9 +11,15 @@ export class User {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column() fcmToken: string;
-  @Column({ nullable: true }) deviceType?: string;
+  @Column()
+  fcmToken: string;
 
-  @CreateDateColumn() createdAt: Date;
-  @UpdateDateColumn() updatedAt: Date;
+  @Column({ nullable: true })
+  deviceType?: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

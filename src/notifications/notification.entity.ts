@@ -15,11 +15,20 @@ export class Notification {
   @Column({ type: 'bigint' })
   userId: number;
 
-  @Column() busId: string;
-  @Column() busNumber: string;
-  @Column() busDirection: string;
-  @Column() stopId: string;
-  @Column() stopName: string;
+  @Column()
+  busId: string;
+
+  @Column()
+  busNumber: string;
+
+  @Column()
+  busDirection: string;
+
+  @Column()
+  stopId: string;
+
+  @Column()
+  stopName: string;
 
   @Column({ default: 'time' })
   notificationType: 'time' | 'stops';
@@ -43,6 +52,9 @@ export class Notification {
   @Column({ type: 'int', nullable: true })
   lastEtaMinutes: number | null;
 
-  @CreateDateColumn() createdAt: Date;
-  @UpdateDateColumn() updatedAt: Date;
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

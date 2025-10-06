@@ -18,8 +18,11 @@ export class NotificationLog {
   @Column({ default: 'sent' }) // 'sent' | 'failed'
   result: string;
 
-  @Column({ nullable: true }) errorCode?: string;
-  @Column({ nullable: true }) errorMessage?: string;
+  @Column({ nullable: true })
+  errorCode?: string;
+
+  @Column({ nullable: true })
+  errorMessage?: string;
 
   @CreateDateColumn() createdAt: Date;
 }

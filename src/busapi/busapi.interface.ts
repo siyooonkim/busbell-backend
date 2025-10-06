@@ -9,11 +9,7 @@ export interface BusApiPort {
    * @param routeId   노선(버스) ID
    */
 
-  getArrivalEta(
-    cityCode: string,
-    stopId: string,
-    routeId: string,
-  ): Promise<ArrivalInfo>;
+  getArrivalInfo(busId: string, stopId: string): Promise<ArrivalInfo>;
 }
 
 // 2. 외부 api가 반환해야할 데이터

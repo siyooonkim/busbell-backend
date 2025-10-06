@@ -23,18 +23,13 @@ export class TagoAdapter implements BusApiPort {
    * '도시/정류장/노선'에 대한 ETA(분) 조회
    * TODO: 실제 TAGO 엔드포인트/필드명은 문서 기준으로 정확히 맞춰야 한다.
    */
-  async getArrivalEta(
-    cityCode: string,
-    stopId: string,
-    routeId: string,
-  ): Promise<ArrivalInfo> {
+  async getArrivalInfo(stopId: string, busId: string): Promise<ArrivalInfo> {
     // 1) TAGO 오퍼레이션 URL (예시: 정류장별 도착 예정 리스트)
     const url = `${this.tagoBaseUrl}`;
 
-    // 2) HTTP 요청: 도시코드/정류장ID를 전달
+    // 2) HTTP 요청: 정류장ID를 전달
     const response = await this.httpClient.get(url, {
       params: {
-        cityCode,
         stopId,
       },
     });
@@ -47,18 +42,15 @@ export class TagoAdapter implements BusApiPort {
         : [raw.response.body.items.item]
       : [];
 
-    // 4) 해당 routeId에 해당하는 항목들만 필터링
+    // 4) 해당 busId에 해당하는 항목들만 필터링
     const matched = items.filter(
-      (it) => String(it.routeId) === String(routeId),
+      (item) => String(item.busId) === String(busId),
     );
 
-    const etaCandidates = matched
-      .map((it) => Number(it.predictTime1)) // 예: 첫 번째 도착 예정(분)
-      .filter((n) => Number.isFinite(n));
+    // 확인 필요
+    const etaMinutes = Math.min(matched[0].minutes);
+    const remainingStopsCount = Math.min(matched[0].stops);
 
-    const minEta = Math.min(...etaCandidates);
-
-    // 8) Port 규격대로 반환
-    return { etaMinutes: minEta };
+    return { etaMinutes, remainingStopsCount };
   }
 }

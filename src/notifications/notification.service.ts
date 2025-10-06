@@ -22,7 +22,7 @@ export class NotificationsService {
       nextPollAt: new Date(), // 즉시 한 번 확인
     });
     const saved = await this.repo.save(n);
-    await this.timers.start(saved.id); // ✅ 예약 직후 이 예약만 폴링 시작
+    await this.timers.startPollingForNotification(saved.id); // ✅ 예약 직후 이 예약만 폴링 시작
     return saved;
   }
 
@@ -31,7 +31,7 @@ export class NotificationsService {
       status: NotificationStatus.Canceled,
       nextPollAt: null,
     });
-    this.timers.stop(id); // ✅ 즉시 폴링 중단
+    this.timers.stopPollingForNotification(id); // ✅ 즉시 폴링 중단
     return { ok: true };
   }
 

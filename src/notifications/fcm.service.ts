@@ -8,15 +8,15 @@ import { User } from '../users/user.entity';
 @Injectable()
 export class FcmService {
   constructor(
-    cfg: ConfigService,
+    config: ConfigService,
     @InjectRepository(User) private readonly users: Repository<User>,
   ) {
     if (!admin.apps.length) {
       admin.initializeApp({
         credential: admin.credential.cert({
-          projectId: cfg.get('FIREBASE_PROJECT_ID'),
-          clientEmail: cfg.get('FIREBASE_CLIENT_EMAIL'),
-          privateKey: (cfg.get('FIREBASE_PRIVATE_KEY') || '').replace(
+          projectId: config.get('FIREBASE_PROJECT_ID'),
+          clientEmail: config.get('FIREBASE_CLIENT_EMAIL'),
+          privateKey: (config.get('FIREBASE_PRIVATE_KEY') || '').replace(
             /\\n/g,
             '\n',
           ),

@@ -23,12 +23,6 @@ function computeNextPollDelayMs(
   return 30_000; // 막판: 30초 간격
 }
 
-/** 동일 시각에 몰려 때리는 것을 완화하기 위해 지터(±10%)를 더한다. */
-function addJitterMs(baseMs: number) {
-  const range = Math.floor(baseMs * 0.1); // 10%
-  return baseMs + (Math.random() * 2 * range - range); // [-10%, +10%]
-}
-
 @Injectable()
 export class TimerService {
   /** 메모리상에서 실행 중인 타이머를 관리한다. (중복 방지용)
@@ -56,16 +50,8 @@ export class TimerService {
     if (!reservation || reservation.status !== NotificationStatus.Reserved)
       return;
 
-    // 3) nextPollAt(다음 점검 시각)이 미래면 그때까지 대기, 없으면 즉시 실행
-    const nowMs = Date.now();
-    const nextPollAtMs = reservation.nextPollAt?.getTime() ?? nowMs;
-    const initialDelayMs = Math.max(0, nextPollAtMs - nowMs);
-
-    // 4) 지터를 살짝 더해 타임아웃 예약
-    const timerHandle = setTimeout(
-      () => this.runPollingLoop(notificationId),
-      addJitterMs(initialDelayMs),
-    );
+    // 4) 타임아웃 예약
+    const timerHandle = setTimeout(() => this.runPollingLoop(notificationId));
     this.activeTimersByNotificationId.set(notificationId, timerHandle);
   }
 
@@ -87,9 +73,7 @@ export class TimerService {
     }
 
     // 2) ETA(분) 조회
-    //    ※ 현재 너 코드 시그니처를 그대로 따름: getEtaMinutes(busId, stopId)
-    //    ※ 만약 BusApiService가 (cityCode, stopId, routeId) 시그니처로 바뀌면 아래 한 줄만 수정하면 됨.
-    const etaMinutes = await this.busApi.getEtaMinutes(
+    const { etaMinutes } = await this.busApi.getArrivalInfo(
       reservation.busId,
       reservation.stopId,
     );
