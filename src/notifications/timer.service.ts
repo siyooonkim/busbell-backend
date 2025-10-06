@@ -1,95 +1,137 @@
+// src/notifications/timer.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThanOrEqual } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Notification } from './notification.entity';
 import { NotificationStatus } from './notification-status.enum';
 import { BusApiService } from '../busapi/busapi.service';
 import { FcmService } from './fcm.service';
 
-function nextDelayMs(eta: number, minutesBefore: number) {
-  const left = eta - (minutesBefore || 0);
-  if (left >= 20) return 10 * 60_000;
-  if (left >= 10) return 5 * 60_000;
-  if (left >= 5) return 2 * 60_000;
-  if (left >= 2) return 60_000;
-  return 30_000;
+/** 다음 폴링까지 기다릴 시간(ms)을 계산한다.
+ *  - etaMinutes: 현재 ETA(분)
+ *  - alertMinutesBefore: 유저가 설정한 "몇 분 전" 알림값
+ */
+function computeNextPollDelayMs(
+  etaMinutes: number,
+  alertMinutesBefore: number,
+) {
+  const minutesUntilAlert = etaMinutes - (alertMinutesBefore || 0);
+  if (minutesUntilAlert >= 20) return 10 * 60_000; // 10분 간격
+  if (minutesUntilAlert >= 10) return 5 * 60_000; // 5분 간격
+  if (minutesUntilAlert >= 5) return 2 * 60_000; // 2분 간격
+  if (minutesUntilAlert >= 2) return 60_000; // 1분 간격
+  return 30_000; // 막판: 30초 간격
 }
-const jitter = (ms: number) => {
-  const d = Math.floor(ms * 0.1);
-  return ms + (Math.random() * 2 * d - d);
-};
+
+/** 동일 시각에 몰려 때리는 것을 완화하기 위해 지터(±10%)를 더한다. */
+function addJitterMs(baseMs: number) {
+  const range = Math.floor(baseMs * 0.1); // 10%
+  return baseMs + (Math.random() * 2 * range - range); // [-10%, +10%]
+}
 
 @Injectable()
 export class TimerService {
-  private timers = new Map<number, NodeJS.Timeout>(); // notificationId -> timeout
+  /** 메모리상에서 실행 중인 타이머를 관리한다. (중복 방지용)
+   *  key: notificationId, value: setTimeout 핸들
+   */
+  private activeTimersByNotificationId = new Map<number, NodeJS.Timeout>();
 
+  /** DI(의존성 주입): Nest가 Repository/Service 인스턴스를 대신 만들어 넣어준다. */
   constructor(
     @InjectRepository(Notification)
-    private readonly repo: Repository<Notification>,
-    private readonly bus: BusApiService,
-    private readonly fcm: FcmService,
+    private readonly notificationRepo: Repository<Notification>, // 알림 예약 DB 접근자
+    private readonly busApi: BusApiService, // ETA를 얻기 위한 외부 API 래퍼
+    private readonly fcm: FcmService, // 푸시 발송기
   ) {}
 
-  async start(notificationId: number) {
-    this.stop(notificationId); // ✅ 중복 방지
-    const n = await this.repo.findOneBy({ id: notificationId });
-    if (!n || n.status !== NotificationStatus.Reserved) return;
+  /** 지정한 예약(notificationId)에 대한 폴링을 시작하거나 재시작한다. */
+  async startPollingForNotification(notificationId: number) {
+    // 1) 혹시 이전에 걸린 타이머가 있으면 먼저 제거(중복 방지)
+    this.stopPollingForNotification(notificationId);
 
-    const now = Date.now();
-    const delay = Math.max(0, (n.nextPollAt?.getTime() ?? now) - now);
-    const t = setTimeout(() => this.loop(notificationId), jitter(delay));
-    this.timers.set(notificationId, t);
-  }
-
-  stop(notificationId: number) {
-    const t = this.timers.get(notificationId);
-    if (t) clearTimeout(t);
-    this.timers.delete(notificationId);
-  }
-
-  private async loop(notificationId: number) {
-    const n = await this.repo.findOneBy({ id: notificationId });
-    if (!n || n.status !== NotificationStatus.Reserved)
-      return this.stop(notificationId);
-
-    const eta = await this.bus.getEtaMinutes(n.busId, n.stopId);
-
-    if (eta <= (n.minutesBefore ?? 0)) {
-      try {
-        await this.fcm.sendToUser(n.userId, {
-          title: `${n.busNumber} 도착 임박`,
-          body: `${n.stopName}에 곧 도착`,
-          data: { notificationId: String(n.id) },
-        });
-      } finally {
-        await this.repo.update(n.id, {
-          status: NotificationStatus.Done,
-          nextPollAt: null,
-          lastEtaMinutes: eta,
-        });
-        this.stop(notificationId);
-      }
+    // 2) DB에서 최신 예약 상태를 읽어온다.
+    const reservation = await this.notificationRepo.findOneBy({
+      id: notificationId,
+    });
+    if (!reservation || reservation.status !== NotificationStatus.Reserved)
       return;
+
+    // 3) nextPollAt(다음 점검 시각)이 미래면 그때까지 대기, 없으면 즉시 실행
+    const nowMs = Date.now();
+    const nextPollAtMs = reservation.nextPollAt?.getTime() ?? nowMs;
+    const initialDelayMs = Math.max(0, nextPollAtMs - nowMs);
+
+    // 4) 지터를 살짝 더해 타임아웃 예약
+    const timerHandle = setTimeout(
+      () => this.runPollingLoop(notificationId),
+      addJitterMs(initialDelayMs),
+    );
+    this.activeTimersByNotificationId.set(notificationId, timerHandle);
+  }
+
+  /** 해당 예약의 폴링을 중지한다. (취소/완료 시 호출) */
+  stopPollingForNotification(notificationId: number) {
+    const handle = this.activeTimersByNotificationId.get(notificationId);
+    if (handle) clearTimeout(handle); // 타이머 해제
+    this.activeTimersByNotificationId.delete(notificationId); // 맵에서 제거
+  }
+
+  /** 폴링 루프 한 사이클: ETA 조회 → 조건 판단 → (발사 or 다음 스케줄) */
+  private async runPollingLoop(notificationId: number) {
+    // 1) 최신 예약 상태 재확인 (취소/완료 되었을 수 있음)
+    const reservation = await this.notificationRepo.findOneBy({
+      id: notificationId,
+    });
+    if (!reservation || reservation.status !== NotificationStatus.Reserved) {
+      return this.stopPollingForNotification(notificationId);
     }
 
-    const delay = nextDelayMs(eta, n.minutesBefore ?? 0);
-    const nextAt = new Date(Date.now() + delay);
-    await this.repo.update(n.id, { lastEtaMinutes: eta, nextPollAt: nextAt });
+    // 2) ETA(분) 조회
+    //    ※ 현재 너 코드 시그니처를 그대로 따름: getEtaMinutes(busId, stopId)
+    //    ※ 만약 BusApiService가 (cityCode, stopId, routeId) 시그니처로 바뀌면 아래 한 줄만 수정하면 됨.
+    const etaMinutes = await this.busApi.getEtaMinutes(
+      reservation.busId,
+      reservation.stopId,
+    );
 
-    const t = setTimeout(() => this.loop(notificationId), delay);
-    this.timers.set(notificationId, t);
-  }
+    // 3) 발사 조건: ETA <= 사용자가 설정한 minutesBefore
+    const alertMinutesBefore = reservation.minutesBefore ?? 0;
+    const shouldNotify = etaMinutes <= alertMinutesBefore;
 
-  // (선택) 지금 확인해야 할 것만 한 번에 시작하고 싶을 때 쓰는 헬퍼
-  async kickDueOnce(limit = 100) {
-    const due = await this.repo.find({
-      where: {
-        status: NotificationStatus.Reserved,
-        nextPollAt: LessThanOrEqual(new Date()),
-      },
-      take: limit,
-      order: { nextPollAt: 'ASC' },
+    if (shouldNotify) {
+      // 3-1) 조건 만족 → 푸시 발송 + 상태/로그 갱신 + 타이머 종료
+      try {
+        await this.fcm.sendToUser(reservation.userId, {
+          title: `${reservation.busNumber} 도착 임박`,
+          body: `${reservation.stopName}에 곧 도착`,
+          data: { notificationId: String(reservation.id) },
+        });
+      } finally {
+        await this.notificationRepo.update(reservation.id, {
+          status: NotificationStatus.Done, // 완료 처리
+          nextPollAt: null, // 이후 폴링 불필요
+          lastEtaMinutes: etaMinutes, // 참고값 기록
+        });
+        this.stopPollingForNotification(notificationId);
+      }
+      return; // 이번 사이클 종료
+    }
+
+    // 4) 아직 때가 아님 → 다음 폴링 시각 계산 후 DB/메모리 모두 스케줄
+    const nextDelayMs = computeNextPollDelayMs(etaMinutes, alertMinutesBefore);
+    const nextPollAt = new Date(Date.now() + nextDelayMs);
+
+    // 4-1) DB에 "다음 점검 시각"과 "최근 ETA"를 저장 (재부팅 복구용)
+    await this.notificationRepo.update(reservation.id, {
+      lastEtaMinutes: etaMinutes,
+      nextPollAt,
     });
-    for (const n of due) this.start(n.id);
+
+    // 4-2) 메모리 타이머 재설정
+    const handle = setTimeout(
+      () => this.runPollingLoop(notificationId),
+      nextDelayMs,
+    );
+    this.activeTimersByNotificationId.set(notificationId, handle);
   }
 }

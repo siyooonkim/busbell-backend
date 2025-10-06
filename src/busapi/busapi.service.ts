@@ -1,3 +1,9 @@
+// Facade: 앱 내부에서 쓸 얇은 래퍼(공통 메서드만 노출)
+// 복잡한 하위 시스템 앞에 ‘간단한 출입구 하나’를 세워서, 밖에서는 그 출입구만 쓰게 만드는 패턴
+// 포트(인터페이스): “외부 제공자가 지켜야 할 함수 모양” 정의. (예: BusApiPort)
+// 어댑터(구현): 실제로 API를 호출해서 그 모양에 맞춰 값을 돌려줌. (예: TagoAdapter, MockAdapter)
+// 파사드(서비스): 바깥에서 쓰기 쉽게 얇은 래퍼. 내부 어댑터를 감추고 공통 메서드만 노출. (예: BusApiService)
+
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 
