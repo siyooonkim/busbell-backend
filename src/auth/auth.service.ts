@@ -46,7 +46,7 @@ export class AuthService {
     return { user, accessToken, refreshToken };
   }
 
-  // ✅ 1) OTP 발급
+  // ✅ OTP 발급
   async sendOtp(phone: string) {
     const code = String(Math.floor(100000 + Math.random() * 900000));
     const expires = new Date(Date.now() + 3 * 60 * 1000); // 3분 후 만료
@@ -57,7 +57,7 @@ export class AuthService {
     return { success: true, code }; // 테스트용으로 code 리턴
   }
 
-  // ✅ 2) OTP 인증 & 회원 생성 or 로그인
+  // ✅ OTP 인증 & 회원 생성 or 로그인
   async verifyOtp(phone: string, code: string, deviceId: string) {
     const otp = await this.otpRepo.findOne({ where: { phone, code } });
     if (!otp || otp.expiresAt < new Date()) {
@@ -97,7 +97,7 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  // ✅ 3) Refresh 토큰 재발급
+  // ✅ Refresh 토큰 재발급
   async refreshTokens(userId: number, refreshToken: string) {
     const auth = await this.authRepo.findOne({ where: { userId } });
     if (!auth || !auth.refreshTokenHash) throw new UnauthorizedException();
@@ -112,5 +112,13 @@ export class AuthService {
     await this.authRepo.save(auth);
 
     return { accessToken: newAccess, refreshToken: newRefresh };
+  }
+
+  // ✅ 로그아웃
+  async logout(userId: number, deviceId: string) {
+    await this.authRepo.update(
+      { userId, deviceId },
+      { refreshTokenHash: null, refreshExpiresAt: null },
+    );
   }
 }
