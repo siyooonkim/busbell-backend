@@ -17,8 +17,10 @@ export class AuthController {
   }
 
   @Post('register')
-  register(@Body() body: { phone: string; deviceId: string }) {
-    return this.authService.register(body.phone, body.deviceId);
+  register(
+    @Body() body: { phone: string; deviceId: string; fcmToken: string },
+  ) {
+    return this.authService.register(body.phone, body.deviceId, body.fcmToken);
   }
 
   @Post('refresh')

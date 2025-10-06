@@ -17,16 +17,12 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async register(phone: string, deviceId: string) {
-    // 1️⃣ 기존 Auth가 있는지 확인
+  async register(phone: string, deviceId: string, fcmToken: string) {
     let auth = await this.authRepo.findOne({ where: { phone, deviceId } });
+    let user: User;
 
-    // 2️⃣ User가 없으면 새로 생성
-    let user: User | null = null;
     if (!auth) {
-      user = await this.userRepo.save(
-        this.userRepo.create({ fcmToken: deviceId }),
-      );
+      user = await this.userRepo.save(this.userRepo.create({ fcmToken }));
       auth = this.authRepo.create({
         userId: user.id,
         phone,
