@@ -20,8 +20,6 @@ import { ScheduleModule } from '@nestjs/schedule';
         username: cfg.get('DB_USER'),
         password: cfg.get('DB_PASS'),
         database: cfg.get('DB_NAME'),
-        autoLoadEntities: true,
-        synchronize: true,
         logging: true,
       }),
     }),

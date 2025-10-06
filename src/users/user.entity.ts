@@ -12,6 +12,9 @@ export class User {
   id: number;
 
   @Column()
+  nickname: string;
+
+  @Column()
   fcmToken: string;
 
   @Column({ nullable: true })
