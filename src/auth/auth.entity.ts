@@ -1,14 +1,17 @@
+import { User } from '../users/user.entity';
 import {
   Column,
   CreateDateColumn,
   Entity,
   Index,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('auth')
-@Index(['phone'], { unique: true })
+@Index(['deviceId', 'userId'], { unique: true })
 export class Auth {
   @PrimaryGeneratedColumn('increment')
   id: number;
@@ -16,19 +19,10 @@ export class Auth {
   @Column({ type: 'bigint' })
   userId: number;
 
-  // 'phone' | 'kakao'
-  @Column({ type: 'varchar', length: 20 })
-  provider: 'phone' | 'kakao';
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'userId' })
+  user: User;
 
-  // phone: 01012341234
-  @Column({ type: 'varchar', length: 20 })
-  phone: string;
-
-  // kakaoId
-  @Column({ type: 'varchar', length: 100 })
-  kakaoId?: string;
-
-  // RN에서 전달
   @Column({ type: 'varchar', length: 191 })
   deviceId: string;
 

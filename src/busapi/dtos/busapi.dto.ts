@@ -16,3 +16,9 @@ export class GetEtaDto {
   @IsString()
   stopId: string;
 }
+
+export class GetBusInfoDto {
+  @ApiProperty({ example: 'ROUTE_G_9507' })
+  @IsString()
+  routeId: string;
+}

@@ -6,11 +6,51 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { BUS_API_TOKEN } from './busapi.token';
-import { ArrivalInfo, BusApiPort } from './busapi.interface';
+import {
+  ArrivalInfo,
+  BusApiPort,
+  LiveData,
+  RouteOverview,
+} from './busapi.interface';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class BusApiService {
-  constructor(@Inject(BUS_API_TOKEN) private readonly busApi: BusApiPort) {}
+  constructor(
+    @Inject(BUS_API_TOKEN) private readonly busApi: BusApiPort,
+    @Inject(CACHE_MANAGER) private readonly cache: Cache,
+  ) {}
+
+  async getOverview(routeId: string): Promise<RouteOverview> {
+    const key = `bus:overview:${routeId}`;
+    const cached = await this.cache.get<RouteOverview>(key);
+
+    if (cached) {
+      console.log('🟢 [CACHE HIT] overview');
+      return cached;
+    }
+
+    console.log('🔵 [CACHE MISS] overview');
+    const data = await this.busApi.getOverview(routeId);
+    await this.cache.set(key, data, 60 * 60 * 6); // 6시간
+    return data;
+  }
+
+  async getLive(routeId: string): Promise<LiveData> {
+    const key = `bus:live:${routeId}`;
+    const cached = await this.cache.get<LiveData>(key);
+
+    if (cached) {
+      console.log('🟢 [CACHE HIT] live');
+      return cached;
+    }
+
+    console.log('🔵 [CACHE MISS] live');
+    const data = await this.busApi.getLive(routeId);
+    await this.cache.set(key, data, 10); // 10초
+    return data;
+  }
 
   // ETA(분)만 리턴. 실제 API 붙일 때 여기만 고치면 나머지는 그대로 작동.
   async getArrivalInfo(busId: string, stopId: string): Promise<ArrivalInfo> {

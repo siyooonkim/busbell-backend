@@ -8,6 +8,8 @@ import { UsersModule } from './users/user.module';
 import { NotificationsModule } from './notifications/notification.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AuthModule } from './auth/auth.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import { redisStore } from 'cache-manager-redis-yet';
 
 @Module({
   imports: [
@@ -23,6 +25,14 @@ import { AuthModule } from './auth/auth.module';
         database: cfg.get('DB_NAME'),
         logging: true,
         autoLoadEntities: true,
+      }),
+    }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: () => ({
+        store: redisStore as any,
+        url: process.env.REDIS_URL, // 예: redis://localhost:6379
+        ttl: 0, // 기본 TTL 없음(서비스별로 지정)
       }),
     }),
     ScheduleModule.forRoot(),

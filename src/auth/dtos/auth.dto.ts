@@ -1,12 +1,6 @@
+// src/auth/dtos/auth.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsString,
-  Length,
-  IsOptional,
-  IsIn,
-  IsEmail,
-  MinLength,
-} from 'class-validator';
+import { IsString, IsEmail, MinLength } from 'class-validator';
 
 export class RegisterDto {
   @ApiProperty({ example: 'user@example.com' })
@@ -15,8 +9,19 @@ export class RegisterDto {
 
   @ApiProperty({ example: 'strongPassword123' })
   @IsString()
-  @MinLength(8) // 정책 예시
+  @MinLength(8)
   password: string;
+
+  @ApiProperty({
+    example: 'device-uuid-xyz',
+    description: '디바이스 식별자(세션 키)',
+  })
+  @IsString()
+  deviceId: string;
+
+  @ApiProperty({ example: 'fcm-token-....', required: false })
+  @IsString()
+  fcmToken?: string;
 }
 
 export class LoginDto {
@@ -27,26 +32,12 @@ export class LoginDto {
   @ApiProperty({ example: 'strongPassword123' })
   @IsString()
   password: string;
-}
 
-// ✅ 3️⃣ 카카오 로그인 DTO
-export class KakaoLoginDto {
-  @ApiProperty({
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-    description: '카카오 액세스 토큰',
-  })
-  @IsString()
-  kakaoAccessToken: string;
-
-  @ApiProperty({
-    example: 'device-uuid-xyz',
-    description: '디바이스 식별자',
-  })
+  @ApiProperty({ example: 'device-uuid-xyz' })
   @IsString()
   deviceId: string;
 }
 
-// ✅ 4️⃣ 토큰 재발급 DTO
 export class RefreshDto {
   @ApiProperty({
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
@@ -56,27 +47,9 @@ export class RefreshDto {
   refreshToken: string;
 }
 
-// ✅ 5️⃣ 로그아웃 DTO
-export class LogoutLocalDto {
-  @ApiProperty({
-    example: 'phone',
-    description: '로그인 제공자 ("phone" | "kakao")',
-    enum: ['phone', 'kakao'],
-  })
-  @IsIn(['phone', 'kakao'])
-  provider: 'phone' | 'kakao';
-
-  @ApiProperty({
-    example: '01012345678',
-    description: '휴대폰 번호 (phone 로그인 시 필수)',
-  })
+// ✅ email-only이므로 provider/phone 필드 제거
+export class LogoutDto {
+  @ApiProperty({ example: 'device-uuid-xyz' })
   @IsString()
-  phone: string;
-
-  @ApiProperty({
-    example: 'device-uuid-xyz',
-    description: '디바이스 식별자',
-  })
-  @IsString()
-  deviceId: string;
+  deviceId: string; // 가드에서 추출 가능하면 바디로 안 받아도 됨
 }

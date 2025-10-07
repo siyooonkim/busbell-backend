@@ -1,21 +1,8 @@
 // src/busapi/busapi.controller.ts
-import {
-  BadRequestException,
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiQuery,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
-import { BusApiService } from './busapi.service';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/jwt.guard';
-import { GetEtaDto } from './dtos/busapi.dto';
+import { BusApiService } from './busapi.service';
 
 @ApiTags('Bus API')
 @ApiBearerAuth()
@@ -24,35 +11,21 @@ import { GetEtaDto } from './dtos/busapi.dto';
 export class BusApiController {
   constructor(private readonly busApiService: BusApiService) {}
 
-  // ✅ ETA 조회
+  @Get('overview')
+  @ApiOperation({ summary: '노선 기본정보 조회 (6시간 캐시)' })
+  overview(@Query('routeId') routeId: string) {
+    return this.busApiService.getOverview(routeId);
+  }
+
+  @Get('live')
+  @ApiOperation({ summary: '실시간 위치 (10초 캐시)' })
+  live(@Query('routeId') routeId: string) {
+    return this.busApiService.getLive(routeId);
+  }
+
   @Get('eta')
-  @ApiOperation({ summary: '버스 도착 ETA(분) 조회' })
-  @ApiQuery({
-    name: 'busId',
-    required: true,
-    type: String,
-    example: '9507',
-    description: '버스 ID',
-  })
-  @ApiQuery({
-    name: 'stopId',
-    required: true,
-    type: String,
-    example: 'STOP123',
-    description: '정류장 ID',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '해당 정류장의 버스 도착 예상 시간(분)을 반환합니다.',
-    schema: {
-      example: { etaMinutes: 5 },
-    },
-  })
-  async getEtaMinutes(@Query() query: GetEtaDto) {
-    const etaMinutes = await this.busApiService.getArrivalInfo(
-      query.busId,
-      query.stopId,
-    );
-    return { etaMinutes };
+  @ApiOperation({ summary: 'ETA (단건, 캐시 없음)' })
+  eta(@Query('busId') busId: string, @Query('stopId') stopId: string) {
+    return this.busApiService.getArrivalInfo(busId, stopId);
   }
 }
