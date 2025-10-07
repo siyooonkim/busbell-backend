@@ -179,15 +179,7 @@ export class AuthService {
   }
 
   // 로그아웃(해당 디바이스 세션 파기)
-  async logout(userId: number, deviceId: string) {
-    await this.authRepo.update(
-      { userId, deviceId },
-      { refreshTokenHash: null, refreshExpiresAt: null },
-    );
-  }
-
-  // 모든 디바이스 로그아웃(선택)
-  async logoutAll(userId: number) {
+  async logout(userId: number) {
     await this.authRepo.update(
       { userId },
       { refreshTokenHash: null, refreshExpiresAt: null },

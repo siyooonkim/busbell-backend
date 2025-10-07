@@ -19,16 +19,10 @@ export class Notification {
   busId: string;
 
   @Column()
-  busNumber: string;
-
-  @Column()
   busDirection: string;
 
   @Column()
   stopId: string;
-
-  @Column()
-  stopName: string;
 
   @Column({ default: 'time' })
   notificationType: 'time' | 'stops';

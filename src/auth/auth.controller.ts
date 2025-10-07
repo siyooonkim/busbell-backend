@@ -7,7 +7,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { RefreshDto, RegisterDto, LoginDto, LogoutDto } from './dtos/auth.dto';
+import { RefreshDto, RegisterDto, LoginDto } from './dtos/auth.dto';
 import { JwtAuthGuard } from './jwt.guard';
 
 @ApiTags('Auth')
@@ -46,17 +46,14 @@ export class AuthController {
     return this.authService.refreshTokens(dto.refreshToken);
   }
 
-  // ✅ 4) 로그아웃 (해당 디바이스 세션 파기)
+  // ✅ 4) 로그아웃
   @Post('logout')
   @ApiOperation({ summary: '로그아웃' })
   @ApiBearerAuth()
-  @ApiBody({ type: LogoutDto })
   @UseGuards(JwtAuthGuard)
-  async logout(@Req() req, @Body() dto: LogoutDto) {
-    // JwtStrategy에서 payload에 userId, deviceId 넣어두면 req.user에서 꺼낼 수 있음
+  async logout(@Req() req) {
     const userId: number = req.user.userId;
-    const deviceId: string = dto.deviceId || req.user.deviceId;
-    await this.authService.logout(userId, deviceId);
+    await this.authService.logout(userId);
     return { message: '로그아웃 완료' };
   }
 }

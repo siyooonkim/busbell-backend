@@ -46,10 +46,3 @@ export class RefreshDto {
   @IsString()
   refreshToken: string;
 }
-
-// ✅ email-only이므로 provider/phone 필드 제거
-export class LogoutDto {
-  @ApiProperty({ example: 'device-uuid-xyz' })
-  @IsString()
-  deviceId: string; // 가드에서 추출 가능하면 바디로 안 받아도 됨
-}
