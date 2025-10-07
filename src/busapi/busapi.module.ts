@@ -6,6 +6,7 @@ import { BusApiService } from './busapi.service';
 import { BUS_API_TOKEN } from './busapi.token';
 import { TagoAdapter } from './providers/tago.adapter';
 import { BusApiController } from './busapi.controller';
+import { MockAdapter } from './providers/mock.adapter';
 
 @Module({
   imports: [HttpModule],
@@ -14,7 +15,8 @@ import { BusApiController } from './busapi.controller';
     BusApiService,
     {
       provide: BUS_API_TOKEN,
-      useClass: TagoAdapter,
+      // useClass: TagoAdapter,
+      useClass: MockAdapter,
     },
   ],
   exports: [BusApiService],

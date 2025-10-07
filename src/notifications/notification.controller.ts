@@ -36,7 +36,7 @@ export class NotificationsController {
     description: '알림이 예약되었습니다.',
   })
   async create(@Req() req, @Body() dto: CreateNotificationDto) {
-    const userId = req.user?.userId || 1; // JWT 연결 전 fallback
+    const userId = req.user?.userId; // JWT 연결 전 fallback
     return this.svc.create(userId, dto);
   }
 
