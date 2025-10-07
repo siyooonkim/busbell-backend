@@ -17,6 +17,9 @@ export class User {
   @Column({ nullable: true }) // 기존 fcmToken 유지
   fcmToken?: string;
 
+  @Column()
+  nickname: string;
+
   // 이메일/비밀번호용 필드 추가
   @Column({ nullable: true })
   email?: string;
@@ -27,6 +30,9 @@ export class User {
   @Column({ default: false })
   isEmailVerified: boolean;
 
-  @CreateDateColumn() createdAt: Date;
-  @UpdateDateColumn() updatedAt: Date;
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
