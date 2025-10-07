@@ -7,6 +7,7 @@ import { BusApiModule } from './busapi/busapi.module';
 import { UsersModule } from './users/user.module';
 import { NotificationsModule } from './notifications/notification.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ScheduleModule } from '@nestjs/schedule';
       }),
     }),
     ScheduleModule.forRoot(),
+    AuthModule,
     UsersModule,
     NotificationsModule,
     BusApiModule,
