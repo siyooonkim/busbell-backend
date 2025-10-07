@@ -2,7 +2,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Auth } from './auth.entity';
-import { AuthOtp } from './auth_otp.entity';
 import { User } from '../users/user.entity';
 import { AuthService } from './auth.service';
 import { JwtModule } from '@nestjs/jwt';
@@ -13,7 +12,7 @@ import { JwtAuthGuard } from './jwt.guard';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Auth, AuthOtp, User]),
+    TypeOrmModule.forFeature([Auth, User]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'busbell-secret',

@@ -22,6 +22,7 @@ import { AuthModule } from './auth/auth.module';
         password: cfg.get('DB_PASS'),
         database: cfg.get('DB_NAME'),
         logging: true,
+        autoLoadEntities: true,
       }),
     }),
     ScheduleModule.forRoot(),

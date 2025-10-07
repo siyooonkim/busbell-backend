@@ -1,45 +1,32 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, Length, IsOptional, IsIn } from 'class-validator';
+import {
+  IsString,
+  Length,
+  IsOptional,
+  IsIn,
+  IsEmail,
+  MinLength,
+} from 'class-validator';
 
-// ✅ 1️⃣ OTP 요청 DTO
-export class PhoneRequestDto {
-  @ApiProperty({
-    example: '01012345678',
-    description: '사용자 휴대폰 번호',
-  })
-  @IsString()
-  phone: string;
+export class RegisterDto {
+  @ApiProperty({ example: 'user@example.com' })
+  @IsEmail()
+  email: string;
 
-  @ApiProperty({
-    example: 'device-uuid-xyz',
-    description: '디바이스 식별자 (React Native 단말 UUID)',
-  })
+  @ApiProperty({ example: 'strongPassword123' })
   @IsString()
-  deviceId: string;
+  @MinLength(8) // 정책 예시
+  password: string;
 }
 
-// ✅ 2️⃣ OTP 인증 DTO
-export class PhoneVerifyDto {
-  @ApiProperty({
-    example: '01012345678',
-    description: '사용자 휴대폰 번호',
-  })
-  @IsString()
-  phone: string;
+export class LoginDto {
+  @ApiProperty({ example: 'user@example.com' })
+  @IsEmail()
+  email: string;
 
-  @ApiProperty({
-    example: '123456',
-    description: '6자리 OTP 코드',
-  })
-  @Length(6, 6)
-  code: string;
-
-  @ApiProperty({
-    example: 'device-uuid-xyz',
-    description: '디바이스 식별자 (React Native 단말 UUID)',
-  })
+  @ApiProperty({ example: 'strongPassword123' })
   @IsString()
-  deviceId: string;
+  password: string;
 }
 
 // ✅ 3️⃣ 카카오 로그인 DTO

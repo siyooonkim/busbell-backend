@@ -1,10 +1,13 @@
 // src/auth/auth.service.ts
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Auth } from './auth.entity';
-import { AuthOtp } from './auth_otp.entity';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '../users/user.entity';
 
@@ -12,87 +15,72 @@ import { User } from '../users/user.entity';
 export class AuthService {
   constructor(
     @InjectRepository(Auth) private readonly authRepo: Repository<Auth>,
-    @InjectRepository(AuthOtp) private readonly otpRepo: Repository<AuthOtp>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     private readonly jwtService: JwtService,
   ) {}
 
-  async register(phone: string, deviceId: string, fcmToken: string) {
-    let auth = await this.authRepo.findOne({ where: { phone, deviceId } });
-    let user: User;
+  // 회원가입 (email/password)
+  async registerLocal(
+    email: string,
+    password: string,
+    deviceId?: string,
+    fcmToken?: string,
+  ) {
+    const existing = await this.userRepo.findOne({ where: { email } });
+    if (existing) throw new BadRequestException('이미 사용중인 이메일입니다.');
 
-    if (!auth) {
-      user = await this.userRepo.save(this.userRepo.create({ fcmToken }));
-      auth = this.authRepo.create({
-        userId: user.id,
-        phone,
-        provider: 'phone',
+    const hash = await bcrypt.hash(password, 12); // saltRounds = 12 권장
+    const user = this.userRepo.create({
+      email,
+      passwordHash: hash,
+      fcmToken,
+      isEmailVerified: false,
+    });
+    const saved = await this.userRepo.save(user);
+
+    // 필요하면 Auth 테이블에 provider='local'로 등록 (deviceId 기반)
+    if (deviceId) {
+      await this.authRepo.save({
+        userId: saved.id,
+        provider: 'phone', // 혹은 'local'로 명시(기존 enum 확장 필요)
+        phone: '', // 비어둘 수 있음
         deviceId,
       });
-    } else {
-      user = await this.userRepo.findOne({ where: { id: auth.userId } });
     }
 
-    // 3️⃣ 토큰 발급
-    const payload = { sub: user.id, deviceId };
+    // 토큰 바로 발급할지 여부는 정책(이메일 미검증이면 제한 가능)
+    const payload = { userId: saved.id, deviceId };
     const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+    // 해시해서 Auth 또는 별도 저장소에 보관(이전 구조를 따름)
     const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+    // 업서트 auth row 등 처리...
 
-    auth.refreshTokenHash = refreshTokenHash;
-    auth.refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    await this.authRepo.save(auth);
-
-    return { user, accessToken, refreshToken };
+    return {
+      user: { id: saved.id, email: saved.email },
+      accessToken,
+      refreshToken,
+    };
   }
 
-  // ✅ OTP 발급
-  async sendOtp(phone: string) {
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    const expires = new Date(Date.now() + 3 * 60 * 1000); // 3분 후 만료
+  // 로그인
+  async loginLocal(email: string, password: string, deviceId?: string) {
+    const user = await this.userRepo.findOne({ where: { email } });
+    if (!user || !user.passwordHash)
+      throw new UnauthorizedException('이메일 또는 비밀번호가 틀렸습니다.');
 
-    await this.otpRepo.save({ phone, code, expiresAt: expires });
-    // 실제 서비스에선 여기서 SMS API 호출(Firebase, Twilio 등)
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid)
+      throw new UnauthorizedException('이메일 또는 비밀번호가 틀렸습니다.');
 
-    return { success: true, code }; // 테스트용으로 code 리턴
-  }
-
-  // ✅ OTP 인증 & 회원 생성 or 로그인
-  async verifyOtp(phone: string, code: string, deviceId: string) {
-    const otp = await this.otpRepo.findOne({ where: { phone, code } });
-    if (!otp || otp.expiresAt < new Date()) {
-      throw new UnauthorizedException('OTP expired or invalid');
-    }
-
-    // 기존 유저 확인 or 새로 생성
-    let user = await this.userRepo.findOne({ where: { fcmToken: deviceId } });
-    if (!user)
-      user = await this.userRepo.save(
-        this.userRepo.create({ fcmToken: deviceId }),
-      );
-
-    // Auth row upsert
-    let auth = await this.authRepo.findOne({ where: { phone, deviceId } });
-    if (!auth) {
-      auth = await this.authRepo.save(
-        this.authRepo.create({
-          userId: user.id,
-          phone,
-          provider: 'phone',
-          deviceId,
-        }),
-      );
-    }
-
-    // Refresh Token 발급 및 저장
-    const payload = { sub: user.id, deviceId };
+    // 발급 로직은 기존과 동일
+    const payload = { userId: user.id, deviceId };
     const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
-    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
 
-    auth.refreshTokenHash = refreshTokenHash;
-    auth.refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    await this.authRepo.save(auth);
+    // refreshToken 해시 저장 (Auth 테이블 또는 별도 sessions 테이블)
+    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+    // authRepo.save/update...
 
     return { accessToken, refreshToken };
   }
