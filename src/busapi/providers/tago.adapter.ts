@@ -37,7 +37,7 @@ export class TagoAdapter implements BusApiPort {
     });
   }
   /**
-   * 🔍 4버스 번호 검색
+   * 버스 번호 검색
    * - TAGO: BusRouteInfoInquireService/getRouteNoList
    * - keyword로 버스번호 검색 시 지역별 노선 리스트 반환
    */
@@ -85,7 +85,7 @@ export class TagoAdapter implements BusApiPort {
   }
 
   /**
-   * 🚌 1️⃣ ETA(도착예정시간) 조회
+   * ETA(도착예정시간) 조회
    * - stopId(정류장ID), busId(노선ID)를 받아 도착 예상 시간(분) 반환
    * - TAGO 엔드포인트: BusArrivalService/getBusArrivalList
    */
@@ -125,7 +125,7 @@ export class TagoAdapter implements BusApiPort {
   }
 
   /**
-   * 🧾 2️⃣ 노선 기본정보 조회
+   * 노선 기본정보 조회
    * - TAGO 엔드포인트: BusRouteInfoInquireService/getRouteInfoItem
    */
   async getOverview(routeId: string): Promise<RouteOverview> {
@@ -155,7 +155,7 @@ export class TagoAdapter implements BusApiPort {
   }
 
   /**
-   * 🚍 3️⃣ 실시간 위치 조회
+   * 실시간 위치 조회
    * - TAGO 엔드포인트:
    */
   async getLive(routeId: string): Promise<LiveData> {
