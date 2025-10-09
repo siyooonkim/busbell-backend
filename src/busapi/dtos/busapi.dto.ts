@@ -22,3 +22,9 @@ export class GetBusInfoDto {
   @IsString()
   routeId: string;
 }
+
+export class SearchBusDto {
+  @ApiProperty({ example: '9507', description: '검색할 버스번호 또는 키워드' })
+  @IsString()
+  keyword: string;
+}

@@ -4,6 +4,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
   ArrivalInfo,
   BusApiPort,
+  BusSearchResult,
   LiveData,
   RouteOverview,
 } from '../busapi.interface';
@@ -34,6 +35,53 @@ export class TagoAdapter implements BusApiPort {
         _type: 'json',
       },
     });
+  }
+  /**
+   * 🔍 4버스 번호 검색
+   * - TAGO: BusRouteInfoInquireService/getRouteNoList
+   * - keyword로 버스번호 검색 시 지역별 노선 리스트 반환
+   */
+  async searchBus(keyword: string): Promise<BusSearchResult[]> {
+    try {
+      const url = `${this.tagoBaseUrl}/BusRouteInfoInqireService/getRouteNoList`;
+
+      // 현재 버전은 예시로 경기, 서울, 인천 3개만 순회
+      const cityList = [
+        { name: '경기', code: 31010 },
+        { name: '서울', code: 1100 },
+        { name: '인천', code: 2300 },
+      ];
+
+      const results: BusSearchResult[] = [];
+
+      for (const city of cityList) {
+        const res = await this.httpClient.get(url, {
+          params: {
+            cityCode: city.code,
+            routeNo: keyword,
+          },
+        });
+
+        const items = Array.isArray(res.data?.response?.body?.items?.item)
+          ? res.data.response.body.items.item
+          : [res.data?.response?.body?.items?.item].filter(Boolean);
+
+        for (const item of items) {
+          results.push({
+            routeId: item.routeid,
+            busNumber: item.routeno,
+            regionName: city.name,
+            startStop: item.startnodenm,
+            endStop: item.endnodenm,
+          });
+        }
+      }
+
+      return results;
+    } catch (e) {
+      this.logger.error(`TAGO searchBus failed: ${e.message}`);
+      throw e;
+    }
   }
 
   /**

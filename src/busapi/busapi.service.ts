@@ -22,6 +22,20 @@ export class BusApiService {
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
   ) {}
 
+  async searchBus(keyword: string) {
+    const key = `bus:search:${keyword}`;
+    const cached = await this.cache.get(key);
+    if (cached) {
+      console.log('🟢 [CACHE HIT] bus search');
+      return cached;
+    }
+
+    console.log('🔵 [CACHE MISS] bus search');
+    const data = await this.busApi.searchBus(keyword);
+    await this.cache.set(key, data, 60 * 10); // 10분 캐시
+    return data;
+  }
+
   async getOverview(routeId: string): Promise<RouteOverview> {
     const key = `bus:overview:${routeId}`;
     const cached = await this.cache.get<RouteOverview>(key);

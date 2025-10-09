@@ -4,9 +4,36 @@ import {
   RouteOverview,
   LiveData,
   ArrivalInfo,
+  BusSearchResult,
 } from '../busapi.interface';
 
 export class MockAdapter implements BusApiPort {
+  async searchBus(keyword: string): Promise<BusSearchResult[]> {
+    return [
+      {
+        routeId: '1',
+        busNumber: '9507',
+        regionName: '성남',
+        startStop: '판교대장로',
+        endStop: '청담초등학교',
+      },
+      {
+        routeId: '2',
+        busNumber: '9507',
+        regionName: '서울',
+        startStop: '서울오교',
+        endStop: '두리초등학교',
+      },
+      {
+        routeId: '3',
+        busNumber: '9507',
+        regionName: '인천',
+        startStop: '송도센트럴파크',
+        endStop: '연수구청',
+      },
+    ];
+  }
+
   async getOverview(routeId: string): Promise<RouteOverview> {
     return {
       routeId,
