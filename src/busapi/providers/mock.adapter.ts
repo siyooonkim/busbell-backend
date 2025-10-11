@@ -5,7 +5,7 @@ import {
   LiveData,
   ArrivalInfo,
   BusSearchResult,
-} from '../busapi.interface';
+} from '../interfaces/busapi.interface';
 
 export class MockAdapter implements BusApiPort {
   async searchBus(keyword: string): Promise<BusSearchResult[]> {

@@ -5,13 +5,13 @@
 // 파사드(서비스): 바깥에서 쓰기 쉽게 얇은 래퍼. 내부 어댑터를 감추고 공통 메서드만 노출. (예: BusApiService)
 
 import { Inject, Injectable } from '@nestjs/common';
-import { BUS_API_TOKEN } from './busapi.token';
+import { BUS_API_TOKEN } from './constants/busapi.token';
 import {
   ArrivalInfo,
   BusApiPort,
   LiveData,
   RouteOverview,
-} from './busapi.interface';
+} from './interfaces/busapi.interface';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 

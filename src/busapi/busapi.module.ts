@@ -3,7 +3,7 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { BusApiService } from './busapi.service';
-import { BUS_API_TOKEN } from './busapi.token';
+import { BUS_API_TOKEN } from './constants/busapi.token';
 import { TagoAdapter } from './providers/tago.adapter';
 import { BusApiController } from './busapi.controller';
 import { MockAdapter } from './providers/mock.adapter';

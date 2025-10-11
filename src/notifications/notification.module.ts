@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Notification } from './notification.entity';
+import { Notification } from './entities/notification.entity';
 import { TimerService } from './timer.service';
 import { FcmService } from './fcm.service';
 import { UsersModule } from 'src/users/user.module';
-import { NotificationLog } from './notifications-log.entity';
+import { NotificationLog } from './entities/notifications-log.entity';
 import { NotificationsController } from './notification.controller';
 import { NotificationsService } from './notification.service';
 import { BusApiModule } from 'src/busapi/busapi.module';

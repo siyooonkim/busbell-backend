@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Notification } from './notification.entity';
+import { Notification } from './entities/notification.entity';
 import { NotificationStatus } from './notification-status.enum';
 import { TimerService } from './timer.service';
 import { CreateNotificationDto } from './dtos/create-notifications.dto';
@@ -35,7 +35,7 @@ export class NotificationsService {
     return { ok: true };
   }
 
-  async listMine(userId: number) {
+  async findAll(userId: number) {
     return this.repo.find({ where: { userId }, order: { id: 'DESC' } });
   }
 }

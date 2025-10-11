@@ -7,7 +7,7 @@ import {
   BusSearchResult,
   LiveData,
   RouteOverview,
-} from '../busapi.interface';
+} from '../interfaces/busapi.interface';
 
 /**
  * 🚍 TagoAdapter
