@@ -5,7 +5,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { NotificationStatus } from '../notification-status.enum';
+import { NotificationStatus } from '../enums/notification-status.enum';
 
 @Entity('notifications')
 export class Notification {

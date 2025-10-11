@@ -8,7 +8,7 @@ import { DataSource, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Auth } from './entities/auth.entity';
 import { JwtService } from '@nestjs/jwt';
-import { User } from '../users/user.entity';
+import { User } from '../users/entities/user.entity';
 
 const ACCESS_TTL = '1h';
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;

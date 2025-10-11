@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './entities/notification.entity';
-import { NotificationStatus } from './notification-status.enum';
+import { NotificationStatus } from './enums/notification-status.enum';
 import { TimerService } from './timer.service';
 import { CreateNotificationDto } from './dtos/create-notifications.dto';
 
