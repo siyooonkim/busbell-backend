@@ -1,38 +1,43 @@
-// src/users/user.entity.ts
 import {
-  Column,
-  CreateDateColumn,
   Entity,
   PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
   UpdateDateColumn,
-  Unique,
+  Index,
+  OneToMany,
 } from 'typeorm';
+import { Notification } from '../../notifications/entities/notification.entity';
 
 @Entity('users')
-@Unique(['email'])
 export class User {
-  @PrimaryGeneratedColumn('increment')
+  @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ nullable: true }) // 기존 fcmToken 유지
-  fcmToken?: string;
+  @Column({ unique: true, length: 255 })
+  @Index()
+  email: string;
 
-  @Column()
+  @Column({ name: 'password_hash', length: 255 })
+  passwordHash: string;
+
+  @Column({ name: 'fcm_token', nullable: true, length: 500 })
+  @Index()
+  fcmToken: string | null;
+
+  @Column({ length: 50 })
   nickname: string;
 
-  // 이메일/비밀번호용 필드 추가
-  @Column({ nullable: true })
-  email?: string;
+  @Column({ name: 'is_active', default: true })
+  isActive: boolean;
 
-  @Column({ nullable: true })
-  passwordHash?: string; // 평문 X 반드시 해시
-
-  @Column({ default: false })
-  isEmailVerified: boolean;
-
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  // Relations
+  @OneToMany(() => Notification, (notification) => notification.user)
+  notifications: Notification[];
 }
