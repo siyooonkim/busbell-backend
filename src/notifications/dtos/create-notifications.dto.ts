@@ -1,54 +1,79 @@
-import { ApiProperty } from '@nestjs/swagger';
 import {
+  IsString,
   IsEnum,
   IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
   Min,
+  Max,
+  ValidateIf,
+  IsOptional,
 } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { NotificationType } from '../enums/notification-type.enum';
 
 export class CreateNotificationDto {
-  @ApiProperty({ example: '9507', description: '버스 노선 ID' })
+  @ApiProperty({
+    example: 'ROUTE_SN_9507',
+    description: '노선 ID',
+  })
   @IsString()
-  @IsNotEmpty()
-  busId: string;
+  routeId: string;
 
-  @ApiProperty({ example: '판교방면', description: '버스 방향' })
+  @ApiProperty({
+    example: '9507',
+    description: '버스 번호',
+  })
   @IsString()
-  @IsNotEmpty()
-  busDirection: string;
+  busNumber: string;
 
-  @ApiProperty({ example: 'STOP1234', description: '정류장 ID' })
+  @ApiPropertyOptional({
+    example: '상행',
+    description: '방향 (상행/하행)',
+  })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
+  direction?: string;
+
+  @ApiProperty({
+    example: 'STOP_004',
+    description: '정류장 ID',
+  })
+  @IsString()
   stopId: string;
 
   @ApiProperty({
-    example: 'time',
-    description: '알림 타입 ("time" | "stops")',
-    enum: ['time', 'stops'],
+    example: '롯데마을1,3단지',
+    description: '정류장 이름',
   })
-  @IsEnum(['time', 'stops'] as any)
-  notificationType: 'time' | 'stops' = 'time';
+  @IsString()
+  stopName: string;
 
   @ApiProperty({
-    example: 5,
-    description: '도착 전 알림 받을 분 (notificationType=time)',
-    required: false,
+    enum: NotificationType,
+    example: 'time',
+    description: '알림 타입 (time: 시간 기반, stops: 정류장 기반)',
   })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
+  @IsEnum(NotificationType, {
+    message: 'notificationType은 time 또는 stops 중 하나여야 합니다',
+  })
+  notificationType: NotificationType;
+
+  @ApiPropertyOptional({
+    example: 5,
+    description: '몇 분 전 알림 (1-30분, time 모드일 때 필수)',
+  })
+  @ValidateIf((o) => o.notificationType === NotificationType.Time)
+  @IsInt({ message: 'minutesBefore는 정수여야 합니다' })
+  @Min(1, { message: 'minutesBefore는 최소 1분입니다' })
+  @Max(30, { message: 'minutesBefore는 최대 30분입니다' })
   minutesBefore?: number;
 
-  @ApiProperty({
-    example: 2,
-    description: '남은 정류장 수 기준 알림 (notificationType=stops)',
-    required: false,
+  @ApiPropertyOptional({
+    example: 3,
+    description: '몇 정류장 전 알림 (1-10개, stops 모드일 때 필수)',
   })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
+  @ValidateIf((o) => o.notificationType === NotificationType.Stops)
+  @IsInt({ message: 'stopsBefore는 정수여야 합니다' })
+  @Min(1, { message: 'stopsBefore는 최소 1개입니다' })
+  @Max(10, { message: 'stopsBefore는 최대 10개입니다' })
   stopsBefore?: number;
 }

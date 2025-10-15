@@ -7,7 +7,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { RefreshDto, RegisterDto, LoginDto } from './dtos/auth.dto';
+import { RefreshTokenDto, SignupDto, LoginDto } from './dtos';
 import { JwtAuthGuard } from './guards/jwt.guard';
 
 @ApiTags('Auth')
@@ -18,8 +18,8 @@ export class AuthController {
   // ✅ 1) 회원가입 (email/password + deviceId)
   @Post('register')
   @ApiOperation({ summary: '회원가입 (이메일/비밀번호)' })
-  @ApiBody({ type: RegisterDto })
-  async register(@Body() dto: RegisterDto) {
+  @ApiBody({ type: SignupDto })
+  async register(@Body() dto: SignupDto) {
     // 서비스에 deviceId, fcmToken 전달 → auth upsert까지 수행
     return this.authService.registerLocal(
       dto.email,
@@ -40,7 +40,7 @@ export class AuthController {
   // ✅ 3) AccessToken 재발급
   @Post('refresh')
   @ApiOperation({ summary: 'Access/Refresh 재발급' })
-  @ApiBody({ type: RefreshDto })
+  @ApiBody({ type: RefreshDtoRefreshDto })
   @ApiResponse({ status: 201, description: '새 토큰 발급 성공' })
   async refresh(@Body() dto: RefreshDto) {
     return this.authService.refreshTokens(dto.refreshToken);

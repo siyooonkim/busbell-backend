@@ -1,4 +1,3 @@
-// src/users/user.controller.ts
 import {
   Controller,
   Get,
@@ -17,20 +16,25 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { UserService } from './user.service';
+import { UserProfileDto } from './dtos/user-response.dto';
 
 @ApiTags('Users')
-@ApiBearerAuth() // 🔐 모든 엔드포인트 JWT 필요
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('users')
 export class UserController {
   constructor(private readonly usersService: UserService) {}
 
-  // ✅ 내 정보 조회
-  @Get('me')
+  @Get('profile')
   @ApiOperation({ summary: '내 정보 조회' })
-  @ApiResponse({ status: 200, description: '유저 정보 반환' })
-  async getMe(@Req() req) {
-    return this.usersService.findById(req.user.userId);
+  @ApiResponse({
+    status: 200,
+    description: '사용자 정보 조회 성공',
+    type: UserProfileDto,
+  })
+  @ApiResponse({ status: 401, description: '인증 실패' })
+  async getProfile(@CurrentUser() user: User): Promise<UserProfileDto> {
+    return this.usersService.getProfile(user.id);
   }
 
   // ✅ FCM 토큰 업데이트

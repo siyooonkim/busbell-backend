@@ -7,7 +7,7 @@ export class UserProfileDto {
   @ApiProperty({ example: 'user@example.com' })
   email: string;
 
-  @ApiProperty({ example: '홍길동' })
+  @ApiProperty({ example: '김버스' })
   nickname: string;
 
   @ApiProperty({ example: 'fcm_token_string...', nullable: true })
