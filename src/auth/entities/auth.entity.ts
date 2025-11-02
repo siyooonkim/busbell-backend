@@ -19,6 +19,9 @@ export class Auth {
   @Column({ name: 'user_id' })
   userId: number;
 
+  @Column({ name: 'fcm_token', nullable: true })
+  fcmToken: string | null;
+
   @Column({ name: 'device_id', length: 255 })
   deviceId: string;
 

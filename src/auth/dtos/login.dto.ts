@@ -1,5 +1,5 @@
-import { IsEmail, IsString } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsString, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class LoginDto {
   @ApiProperty({
@@ -10,7 +10,7 @@ export class LoginDto {
   email: string;
 
   @ApiProperty({
-    example: 'password123!',
+    example: 'password123',
     description: '비밀번호',
   })
   @IsString()
@@ -22,4 +22,12 @@ export class LoginDto {
   })
   @IsString()
   deviceId: string;
+
+  @ApiPropertyOptional({
+    example: 'fcm_token_from_firebase',
+    description: 'FCM 푸시 토큰',
+  })
+  @IsOptional()
+  @IsString()
+  fcmToken?: string;
 }

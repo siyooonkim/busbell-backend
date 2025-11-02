@@ -21,10 +21,6 @@ export class User {
   @Column({ name: 'password_hash', length: 255 })
   passwordHash: string;
 
-  @Column({ name: 'fcm_token', nullable: true, length: 500 })
-  @Index()
-  fcmToken: string | null;
-
   @Column({ length: 50 })
   nickname: string;
 

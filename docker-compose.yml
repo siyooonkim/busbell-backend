@@ -1,25 +1,22 @@
 version: '3.9'
 
 services:
- redis:
+  redis:
     image: redis:7-alpine
-    ports: ["6379:6379"]
+    ports:
+      - '6379:6379'
+
   db:
     image: postgres:16
     container_name: busbell-db
     ports:
-      - '5432:5432' # 호스트:컨테이너 포트 매핑
+      - '5432:5432'
     environment:
-      POSTGRES_USER: test # 초기 슈퍼유저
-      POSTGRES_PASSWORD: test # 초기 비밀번호
-      POSTGRES_DB: busbell # 자동 생성 DB
-    healthcheck: # /**헬스체크: DB 준비 여부 확인*/
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d busbell']
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: busbell
     volumes:
-      - busbell_pgdata:/var/lib/postgresql/data # /**데이터 영속화*/
+      - busbell_pgdata:/var/lib/postgresql/data
 
 volumes:
   busbell_pgdata:

@@ -8,8 +8,9 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "db:up": "docker compose up -d db",
+    "db:up": "docker compose up -d",
     "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d",
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:generate": "yarn typeorm migration:generate -d src/data-source.ts src/migrations/initial_schema",
     "migration:run": "yarn typeorm migration:run -d src/data-source.ts",

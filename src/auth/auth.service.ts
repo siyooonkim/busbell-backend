@@ -23,7 +23,7 @@ export class AuthService {
   ) {}
 
   // 회원가입 (email/password) + 세션 생성
-  async registerLocal(
+  async signup(
     email: string,
     password: string,
     deviceId: string, // 🚩 디바이스 기준 세션 필수면 required로 강제

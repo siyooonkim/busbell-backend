@@ -1,59 +1,85 @@
-import { Body, Controller, Post, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiBody,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { RefreshTokenDto, SignupDto, LoginDto } from './dtos';
 import { JwtAuthGuard } from './guards/jwt.guard';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { User } from '../users/entities/user.entity';
+import {
+  SignupDto,
+  LoginDto,
+  LogoutDto,
+  RefreshTokenDto,
+  AuthResponseDto,
+  TokensDto,
+} from './dtos';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // ✅ 1) 회원가입 (email/password + deviceId)
-  @Post('register')
-  @ApiOperation({ summary: '회원가입 (이메일/비밀번호)' })
-  @ApiBody({ type: SignupDto })
-  async register(@Body() dto: SignupDto) {
-    // 서비스에 deviceId, fcmToken 전달 → auth upsert까지 수행
-    return this.authService.registerLocal(
-      dto.email,
-      dto.password,
-      dto.deviceId,
-      dto.fcmToken,
-    );
+  @Post('signup')
+  @ApiOperation({ summary: '회원가입' })
+  @ApiResponse({
+    status: 201,
+    description: '회원가입 성공',
+    type: AuthResponseDto,
+  })
+  @ApiResponse({ status: 400, description: '잘못된 요청' })
+  @ApiResponse({ status: 409, description: '이미 존재하는 이메일' })
+  async signup(@Body() dto: SignupDto): Promise<AuthResponseDto> {
+    return this.authService.signup(dto);
   }
 
-  // ✅ 2) 로그인 (email/password + deviceId)
   @Post('login')
-  @ApiOperation({ summary: '로그인 (이메일/비밀번호)' })
-  @ApiBody({ type: LoginDto })
-  async login(@Body() dto: LoginDto) {
-    return this.authService.loginLocal(dto.email, dto.password, dto.deviceId);
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '로그인' })
+  @ApiResponse({
+    status: 200,
+    description: '로그인 성공',
+    type: AuthResponseDto,
+  })
+  @ApiResponse({ status: 401, description: '이메일 또는 비밀번호 불일치' })
+  async login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
+    return this.authService.login(dto);
   }
 
-  // ✅ 3) AccessToken 재발급
-  @Post('refresh')
-  @ApiOperation({ summary: 'Access/Refresh 재발급' })
-  @ApiBody({ type: RefreshDtoRefreshDto })
-  @ApiResponse({ status: 201, description: '새 토큰 발급 성공' })
-  async refresh(@Body() dto: RefreshDto) {
-    return this.authService.refreshTokens(dto.refreshToken);
-  }
-
-  // ✅ 4) 로그아웃
   @Post('logout')
-  @ApiOperation({ summary: '로그아웃' })
-  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async logout(@Req() req) {
-    const userId: number = req.user.userId;
-    await this.authService.logout(userId);
-    return { message: '로그아웃 완료' };
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '로그아웃' })
+  @ApiResponse({ status: 200, description: '로그아웃 성공' })
+  @ApiResponse({ status: 401, description: '인증 실패' })
+  async logout(
+    @CurrentUser() user: User,
+    @Body() dto: LogoutDto,
+  ): Promise<{ message: string }> {
+    return this.authService.logout(user.id, dto.deviceId);
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '토큰 갱신' })
+  @ApiResponse({
+    status: 200,
+    description: '토큰 갱신 성공',
+    type: TokensDto,
+  })
+  @ApiResponse({ status: 401, description: '유효하지 않은 Refresh Token' })
+  async refresh(@Body() dto: RefreshTokenDto): Promise<TokensDto> {
+    return this.authService.refresh(dto.refreshToken);
   }
 }
