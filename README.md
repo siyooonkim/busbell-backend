@@ -1,99 +1,57 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+🚌 버스 알리미 (Bus Notifier)
+매번 지도 앱을 새로고침하며 버스 도착 시간을 확인하는 번거로움을 해결하기 위한 실시간 버스 도착 알림 서비스입니다.
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+🚀 주요 기능
+버스 노선 및 정류장 검색: 공공 API와 연동하여 버스 노선과 정류장 정보를 검색합니다.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+간편한 알림 설정: '도착 5분 전' 또는 '3개 정류장 전'과 같이 원하는 시점을 선택하여 푸시 알림을 예약할 수 있습니다.
 
-## Description
+실시간 푸시 알림 (FCM): 사용자가 앱을 보고 있지 않아도, 설정한 시간에 정확히 푸시 알림을 전송합니다.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+동적 폴링 (Dynamic Polling): 버스가 멀리 있을 땐 천천히, 가까워질수록 더 자주 위치를 확인하여 시스템 부하와 API 호출을 최적화합니다.
 
-## Project setup
+사용자 인증: JWT(Access/Refresh Token) 기반의 회원가입, 로그인, 로그아웃 기능을 제공합니다.
 
-```bash
-$ yarn install
-```
+💻 기술 스택 (Tech Stack)
+Backend: NestJS, TypeScript, TypeORM
 
-## Compile and run the project
+Database: PostgreSQL
 
-```bash
-# development
-$ yarn run start
+Frontend: React Native, TypeScript
 
-# watch mode
-$ yarn run start:dev
+Infra: AWS (예정)
 
-# production mode
-$ yarn run start:prod
-```
+Others: FCM (푸시 알림), JWT (인증)
 
-## Run tests
+⚙️ 시작하기 (Getting Started)
+1. 레포지토리 클론
+   Bash
+git clone [Your Repository URL]
+cd busbell-backend
 
-```bash
-# unit tests
-$ yarn run test
+2. 패키지 설치
+   Bash  yarn install
+3. 환경변수 설정
+   루트 디렉터리에 .env 파일을 생성하고, 프로젝트에 필요한 환경 변수를 설정합니다. (DB 정보, JWT 시크릿, Firebase Admin SDK 정보 등)
 
-# e2e tests
-$ yarn run test:e2e
+코드 스니펫
 
-# test coverage
-$ yarn run test:cov
-```
+# Server
+PORT=3000
 
-## Deployment
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+4. 서버 실행 (개발 모드)
+   Bash
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+yarn start:dev
+📄 API 문서 (API Documentation)
+서버가 실행되면 (기본 http://localhost:3000/docs)에서 전체 API 명세(Swagger)를 확인할 수 있습니다.
 
-```bash
-$ yarn install -g mau
-$ mau deploy
-```
+주요 API 모듈
+Auth: /api/auth (회원가입, 로그인, 토큰 갱신)
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Users: /api/users (내 정보, FCM 토큰 등록)
 
-## Resources
+Bus (공공 API): /api/bus (노선 검색, 정류장 정보)
 
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Notifications: /api/notifications (알림 예약, 조회, 취소)

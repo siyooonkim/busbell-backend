@@ -1,188 +1,274 @@
 import {
-  BadRequestException,
   Injectable,
   UnauthorizedException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
-import { Auth } from './entities/auth.entity';
+import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcrypt';
 import { User } from '../users/entities/user.entity';
-
-const ACCESS_TTL = '1h';
-const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+import { Auth } from './entities/auth.entity';
+import { SignupDto, LoginDto, AuthResponseDto, TokensDto } from './dtos';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly dataSource: DataSource,
-    @InjectRepository(Auth) private readonly authRepo: Repository<Auth>,
-    @InjectRepository(User) private readonly userRepo: Repository<User>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
+    @InjectRepository(Auth)
+    private readonly authRepo: Repository<Auth>,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
-  // 회원가입 (email/password) + 세션 생성
-  async signup(
-    email: string,
-    password: string,
-    deviceId: string, // 🚩 디바이스 기준 세션 필수면 required로 강제
-    fcmToken?: string,
-  ) {
-    if (!deviceId) throw new BadRequestException('deviceId가 필요합니다.');
+  /**
+   * 회원가입
+   */
+  async signup(dto: SignupDto): Promise<AuthResponseDto> {
+    // 1. 이메일 중복 확인
+    const existingUser = await this.userRepo.findOne({
+      where: { email: dto.email },
+    });
 
-    const existing = await this.userRepo.findOne({ where: { email } });
-    if (existing) throw new BadRequestException('이미 사용중인 이메일입니다.');
+    if (existingUser) {
+      throw new ConflictException('이미 사용 중인 이메일입니다');
+    }
 
-    // 트랜잭션: 유저 생성 + 세션 생성(업서트) 원자화
-    const { user, tokens } = await this.dataSource.transaction(
-      async (manager) => {
-        const hash = await bcrypt.hash(password, 12);
+    // 2. 비밀번호 해싱
+    const passwordHash = await bcrypt.hash(dto.password, 10);
 
-        const user = manager.create(User, {
-          email,
-          passwordHash: hash,
-          fcmToken,
-          isEmailVerified: false,
-        });
-        await manager.save(user);
+    // 3. User 생성
+    const user = this.userRepo.create({
+      email: dto.email,
+      passwordHash,
+      nickname: dto.nickname,
+    });
 
-        // 토큰 발급
-        const payload = { userId: user.id, deviceId };
-        const accessToken = this.jwtService.sign(payload, {
-          expiresIn: ACCESS_TTL,
-        });
-        const refreshToken = this.jwtService.sign(payload, {
-          expiresIn: '7d',
-          secret:
-            process.env.JWT_REFRESH_SECRET ||
-            process.env.JWT_SECRET ||
-            'busbell-secret',
-        });
-        const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+    await this.userRepo.save(user);
 
-        // 세션 업서트: (userId, deviceId) 유니크 키 기준
-        await manager.getRepository(Auth).upsert(
-          {
-            userId: user.id,
-            deviceId,
-            refreshTokenHash,
-            refreshExpiresAt: new Date(Date.now() + REFRESH_TTL_MS),
-            lastLoginAt: new Date(),
-          },
-          ['userId', 'deviceId'],
-        );
+    // 4. 토큰 생성
+    const tokens = await this.generateTokens(user.id, user.email);
 
-        return {
-          user,
-          tokens: { accessToken, refreshToken },
-        };
-      },
-    );
-
+    // 5. 응답
     return {
-      user: { id: user.id, email: user.email },
-      ...tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        nickname: user.nickname,
+        createdAt: user.createdAt,
+      },
+      tokens,
     };
   }
 
-  // 로그인 (email/password) + 세션 갱신(업서트)
-  async loginLocal(email: string, password: string, deviceId: string) {
-    if (!deviceId) throw new BadRequestException('deviceId가 필요합니다.');
-
-    const user = await this.userRepo.findOne({ where: { email } });
-    if (!user || !user.passwordHash)
-      throw new UnauthorizedException('이메일 또는 비밀번호가 틀렸습니다.');
-
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid)
-      throw new UnauthorizedException('이메일 또는 비밀번호가 틀렸습니다.');
-
-    const payload = { userId: user.id, deviceId };
-    const accessToken = this.jwtService.sign(payload, {
-      expiresIn: ACCESS_TTL,
+  /**
+   * 로그인
+   */
+  async login(dto: LoginDto): Promise<AuthResponseDto> {
+    // 1. 사용자 조회
+    const user = await this.userRepo.findOne({
+      where: { email: dto.email, isActive: true },
     });
-    const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: '7d',
-      secret:
-        process.env.JWT_REFRESH_SECRET ||
-        process.env.JWT_SECRET ||
-        'busbell-secret',
-    });
-    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
 
-    // 업서트로 세션 갱신
-    await this.authRepo.upsert(
-      {
-        userId: user.id,
-        deviceId,
-        refreshTokenHash,
-        refreshExpiresAt: new Date(Date.now() + REFRESH_TTL_MS),
-        lastLoginAt: new Date(),
-      },
-      ['userId', 'deviceId'],
+    if (!user) {
+      throw new UnauthorizedException(
+        '이메일 또는 비밀번호가 일치하지 않습니다',
+      );
+    }
+
+    // 2. 비밀번호 확인
+    const isPasswordValid = await bcrypt.compare(
+      dto.password,
+      user.passwordHash,
     );
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException(
+        '이메일 또는 비밀번호가 일치하지 않습니다',
+      );
+    }
+
+    // 3. 토큰 생성
+    const tokens = await this.generateTokens(user.id, user.email);
+
+    // 4. Auth 레코드 생성/업데이트
+    await this.saveAuthSession(
+      user.id,
+      dto.deviceId,
+      tokens.refreshToken,
+      dto.fcmToken, // 👈 FCM 토큰 전달!
+    );
+
+    // 5. 응답
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        nickname: user.nickname,
+        createdAt: user.createdAt,
+      },
+      tokens,
+    };
+  }
+
+  /**
+   * 로그아웃
+   */
+  async logout(userId: number, deviceId: string): Promise<{ message: string }> {
+    // Auth 레코드 비활성화
+    const authRecord = await this.authRepo.findOne({
+      where: { userId, deviceId, isActive: true },
+    });
+
+    if (authRecord) {
+      // 소프트 삭제 (비활성화)
+      authRecord.isActive = false;
+      await this.authRepo.save(authRecord);
+    }
+
+    return { message: '로그아웃되었습니다' };
+  }
+
+  /**
+   * 토큰 갱신
+   */
+  async refresh(refreshToken: string, deviceId: string): Promise<TokensDto> {
+    try {
+      // 1. Refresh Token 검증
+      const payload = this.jwtService.verify(refreshToken, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      });
+
+      // 2. 특정 기기의 Auth 레코드 확인
+      const authRecord = await this.authRepo.findOne({
+        where: {
+          userId: payload.sub,
+          deviceId,
+          isActive: true,
+        },
+      });
+
+      if (!authRecord) {
+        throw new UnauthorizedException('유효하지 않은 Refresh Token입니다');
+      }
+
+      // 3. Refresh Token 해시 비교
+      const isMatch = await bcrypt.compare(
+        refreshToken,
+        authRecord.refreshTokenHash,
+      );
+
+      if (!isMatch) {
+        throw new UnauthorizedException('유효하지 않은 Refresh Token입니다');
+      }
+
+      // 4. Refresh Token 만료 확인
+      if (new Date() > authRecord.refreshExpiresAt) {
+        throw new UnauthorizedException('Refresh Token이 만료되었습니다');
+      }
+
+      // 5. 새 토큰 생성
+      const tokens = await this.generateTokens(payload.sub, payload.email);
+
+      // 6. Refresh Token 업데이트 (Rotation)
+      await this.updateRefreshToken(authRecord.id, tokens.refreshToken);
+
+      return tokens;
+    } catch (error) {
+      console.error(error);
+      throw new UnauthorizedException('유효하지 않은 Refresh Token입니다');
+    }
+  }
+
+  /**
+   * JWT 토큰 생성
+   */
+  private async generateTokens(
+    userId: number,
+    email: string,
+  ): Promise<TokensDto> {
+    const payload = { sub: userId, email };
+
+    const [accessToken, refreshToken] = await Promise.all([
+      // Access Token (짧은 수명)
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get<string>('JWT_SECRET'),
+        expiresIn: this.configService.get<string>('JWT_EXPIRES_IN') || '1h',
+      }),
+      // Refresh Token (긴 수명)
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        expiresIn:
+          this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d',
+      }),
+    ]);
 
     return { accessToken, refreshToken };
   }
 
-  // 리프레시 토큰 재발급
-  async refreshTokens(refreshToken: string) {
-    try {
-      const payload = this.jwtService.verify(refreshToken, {
-        secret:
-          process.env.JWT_REFRESH_SECRET ||
-          process.env.JWT_SECRET ||
-          'busbell-secret',
-      });
+  /**
+   * Auth 세션 저장 (FCM 토큰 포함)
+   */
+  private async saveAuthSession(
+    userId: number,
+    deviceId: string,
+    refreshToken: string,
+    fcmToken?: string,
+  ): Promise<void> {
+    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
 
-      const { userId, deviceId } = payload;
-      const session = await this.authRepo.findOne({
-        where: { userId, deviceId },
-      });
-      if (!session?.refreshTokenHash) throw new UnauthorizedException();
+    const refreshExpiresAt = new Date();
+    refreshExpiresAt.setDate(refreshExpiresAt.getDate() + 7); // 7일 후
 
-      const isValid = await bcrypt.compare(
-        refreshToken,
-        session.refreshTokenHash,
-      );
-      if (!isValid) throw new UnauthorizedException('Invalid refresh token');
+    // 기존 세션 확인
+    let authRecord = await this.authRepo.findOne({
+      where: { userId, deviceId },
+    });
 
-      if (
-        session.refreshExpiresAt &&
-        session.refreshExpiresAt.getTime() < Date.now()
-      ) {
-        throw new UnauthorizedException('Refresh token expired');
+    if (authRecord) {
+      // 업데이트
+      authRecord.refreshTokenHash = refreshTokenHash;
+      authRecord.refreshExpiresAt = refreshExpiresAt;
+      authRecord.lastLoginAt = new Date();
+      authRecord.isActive = true;
+
+      // FCM 토큰이 제공되면 업데이트
+      if (fcmToken) {
+        authRecord.fcmToken = fcmToken;
       }
-
-      const newPayload = { userId, deviceId };
-      const newAccess = this.jwtService.sign(newPayload, {
-        expiresIn: ACCESS_TTL,
+    } else {
+      // 생성
+      authRecord = this.authRepo.create({
+        userId,
+        deviceId,
+        refreshTokenHash,
+        refreshExpiresAt,
+        lastLoginAt: new Date(),
+        isActive: true,
+        fcmToken: fcmToken || null,
       });
-      const newRefresh = this.jwtService.sign(newPayload, {
-        expiresIn: '7d',
-        secret:
-          process.env.JWT_REFRESH_SECRET ||
-          process.env.JWT_SECRET ||
-          'busbell-secret',
-      });
-
-      session.refreshTokenHash = await bcrypt.hash(newRefresh, 10);
-      session.refreshExpiresAt = new Date(Date.now() + REFRESH_TTL_MS);
-      session.lastLoginAt = new Date();
-      await this.authRepo.save(session);
-
-      return { accessToken: newAccess, refreshToken: newRefresh };
-    } catch {
-      throw new UnauthorizedException('Invalid or expired refresh token');
     }
+
+    await this.authRepo.save(authRecord);
   }
 
-  // 로그아웃(해당 디바이스 세션 파기)
-  async logout(userId: number) {
-    await this.authRepo.update(
-      { userId },
-      { refreshTokenHash: null, refreshExpiresAt: null },
-    );
+  /**
+   * Refresh Token 업데이트
+   */
+  private async updateRefreshToken(
+    authId: number,
+    refreshToken: string,
+  ): Promise<void> {
+    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+
+    const refreshExpiresAt = new Date();
+    refreshExpiresAt.setDate(refreshExpiresAt.getDate() + 7);
+
+    await this.authRepo.update(authId, {
+      refreshTokenHash,
+      refreshExpiresAt,
+    });
   }
 }

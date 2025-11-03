@@ -30,8 +30,7 @@ import {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('signup')
-  @ApiOperation({ summary: '회원가입' })
+
   @ApiResponse({
     status: 201,
     description: '회원가입 성공',
@@ -80,6 +79,6 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: '유효하지 않은 Refresh Token' })
   async refresh(@Body() dto: RefreshTokenDto): Promise<TokensDto> {
-    return this.authService.refresh(dto.refreshToken);
+    return this.authService.refresh(dto.refreshToken, dto.deviceId);
   }
 }
