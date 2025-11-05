@@ -73,7 +73,7 @@ export class TimerService {
 
     // ETA 조회
     const { etaMinutes } = await this.busApi.getArrivalInfo(
-      reservation.busId,
+      reservation.routeId,
       reservation.stopId,
     );
 

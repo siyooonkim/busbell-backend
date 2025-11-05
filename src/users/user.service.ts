@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
+import { UserProfileDto } from './dtos/user-response.dto';
 
 @Injectable()
 export class UserService {
@@ -16,14 +17,19 @@ export class UserService {
     return user;
   }
 
-  async updateFcmToken(id: number, fcmToken: string) {
-    await this.usersRepo.update({ id }, { fcmToken });
-    return this.findById(id);
+  async getProfile(id: number): Promise<UserProfileDto> {
+    const user = await this.findById(id);
+    return {
+      id: user.id,
+      email: user.email,
+      nickname: user.nickname,
+      createdAt: user.createdAt,
+    };
   }
 
   async softDelete(id: number) {
-    // 실제 삭제 대신 soft delete or 비활성 처리 가능
-    await this.usersRepo.update({ id }, { fcmToken: null });
+    // isActive를 false로 설정
+    await this.usersRepo.update({ id }, { isActive: false });
     return { message: '회원 탈퇴 완료' };
   }
 }

@@ -30,7 +30,8 @@ import {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-
+  @Post('signup')
+  @ApiOperation({ summary: '회원가입' })
   @ApiResponse({
     status: 201,
     description: '회원가입 성공',

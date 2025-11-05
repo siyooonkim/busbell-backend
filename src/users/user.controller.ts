@@ -1,10 +1,7 @@
 import {
   Controller,
   Get,
-  Patch,
   Delete,
-  Req,
-  Body,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -12,9 +9,10 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiBody,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { User } from './entities/user.entity';
 import { UserService } from './user.service';
 import { UserProfileDto } from './dtos/user-response.dto';
 
@@ -37,27 +35,11 @@ export class UserController {
     return this.usersService.getProfile(user.id);
   }
 
-  // ✅ FCM 토큰 업데이트
-  @Patch('fcm-token')
-  @ApiOperation({ summary: 'FCM 토큰 업데이트' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        fcmToken: { type: 'string', example: 'abcdef123456' },
-      },
-    },
-  })
-  @ApiResponse({ status: 200, description: '토큰 업데이트 완료' })
-  async updateFcm(@Req() req, @Body('fcmToken') fcmToken: string) {
-    return this.usersService.updateFcmToken(req.user.userId, fcmToken);
-  }
-
   // ✅ 회원 탈퇴
   @Delete()
   @ApiOperation({ summary: '회원 탈퇴 (Soft Delete)' })
   @ApiResponse({ status: 200, description: '탈퇴 완료' })
-  async deleteUser(@Req() req) {
-    return this.usersService.softDelete(req.user.userId);
+  async deleteUser(@CurrentUser() user: User) {
+    return this.usersService.softDelete(user.id);
   }
 }

@@ -3,13 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../users/entities/user.entity';
+import { Auth } from '../auth/entities/auth.entity';
 
 @Injectable()
 export class FcmService {
   constructor(
     config: ConfigService,
-    @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Auth) private readonly authRepository: Repository<Auth>,
   ) {
     if (!admin.apps.length) {
       admin.initializeApp({
@@ -29,12 +29,21 @@ export class FcmService {
     userId: number,
     payload: { title: string; body: string; data?: Record<string, string> },
   ) {
-    const u = await this.users.findOneBy({ id: userId });
-    if (!u?.fcmToken) return;
-    await admin.messaging().send({
-      token: u.fcmToken,
-      notification: { title: payload.title, body: payload.body },
-      data: payload.data || {},
+    // 해당 유저의 모든 활성 세션(디바이스)에 푸시 전송
+    const authRecords = await this.authRepository.find({
+      where: { userId, isActive: true },
     });
+
+    const promises = authRecords
+      .filter((auth) => auth.fcmToken)
+      .map((auth) =>
+        admin.messaging().send({
+          token: auth.fcmToken!,
+          notification: { title: payload.title, body: payload.body },
+          data: payload.data || {},
+        }),
+      );
+
+    await Promise.allSettled(promises);
   }
 }

@@ -37,6 +37,8 @@ export class TagoAdapter implements BusApiPort {
     });
   }
   /**
+   * ⭐️ 여기부터 api테스트부터, 이제[ 어떤 api 의 정보가 피요한지 어떤 순서대로 할지 정해야함
+   * 그러기위해 앱 사용 시나리오에 따라서 정해야할듯
    * 버스 번호 검색
    * - TAGO: BusRouteInfoInquireService/getRouteNoList
    * - keyword로 버스번호 검색 시 지역별 노선 리스트 반환
@@ -45,11 +47,15 @@ export class TagoAdapter implements BusApiPort {
     try {
       const url = `${this.tagoBaseUrl}/BusRouteInfoInqireService/getRouteNoList`;
 
-      // 현재 버전은 예시로 경기, 서울, 인천 3개만 순회
+      // 현재 버전은 예시로 주요 도시만 순회
       const cityList = [
-        { name: '경기', code: 31010 },
-        { name: '서울', code: 1100 },
-        { name: '인천', code: 2300 },
+        { name: '수원시', code: 31010 },
+        { name: '성남시', code: 31020 },
+        { name: '의정부시', code: 31030 },
+        { name: '안양시', code: 31040 },
+        { name: '부천시', code: 31050 },
+        { name: '서울', code: 11 },
+        { name: '인천', code: 23 },
       ];
 
       const results: BusSearchResult[] = [];
@@ -62,9 +68,14 @@ export class TagoAdapter implements BusApiPort {
           },
         });
 
+        // 디버깅: API 응답 로그
+        this.logger.debug(`[${city.name}] Response:`, JSON.stringify(res.data, null, 2));
+
         const items = Array.isArray(res.data?.response?.body?.items?.item)
           ? res.data.response.body.items.item
           : [res.data?.response?.body?.items?.item].filter(Boolean);
+
+        this.logger.debug(`[${city.name}] Found ${items.length} items`);
 
         for (const item of items) {
           results.push({
@@ -87,16 +98,17 @@ export class TagoAdapter implements BusApiPort {
   /**
    * ETA(도착예정시간) 조회
    * - stopId(정류장ID), busId(노선ID)를 받아 도착 예상 시간(분) 반환
-   * - TAGO 엔드포인트: BusArrivalService/getBusArrivalList
+   * - TAGO 엔드포인트: ArvlInfoInqireService/getSttnAcctoSpcifyRouteBusArvlPrearngeInfoList
    */
-  async getArrivalInfo(busId: string, stopId: string): Promise<ArrivalInfo> {
+  async getArrivalInfo(routeId: string, nodeId: string): Promise<ArrivalInfo> {
     try {
-      const url = `${this.tagoBaseUrl}/BusArrivalService/getBusArrivalList`;
+      const url = `${this.tagoBaseUrl}/ArvlInfoInqireService/getSttnAcctoSpcifyRouteBusArvlPrearngeInfoList`;
 
       const response = await this.httpClient.get(url, {
         params: {
-          cityCode: 25_010, // 지역 코드 (예시: 서울/수원/부산은 다름)
-          nodeId: stopId, // 정류장 ID
+          cityCode: 31000, // 도시코드 (31000: 경기)
+          nodeId, // 정류장 ID
+          routeId, // 노선 ID
         },
       });
 
@@ -104,18 +116,18 @@ export class TagoAdapter implements BusApiPort {
         ? response.data.response.body.items.item
         : [response.data?.response?.body?.items?.item].filter(Boolean);
 
-      // 버스ID가 일치하는 항목 찾기
-      const matched = items.find(
-        (item) => String(item.routeid) === String(busId),
-      );
-
-      if (!matched) {
+      if (!items || items.length === 0) {
         return { etaMinutes: -1 };
       }
 
-      // API 구조 예시: item.arrtime (초 단위)
-      const etaMinutes = Math.ceil(Number(matched.arrtime) / 60);
-      const remainingStopsCount = Number(matched.arrprevstationcnt || 0);
+      // 첫 번째 도착 예정 버스 정보 사용
+      const item = items[0];
+
+      // arrprevstationcnt: 남은 정류장 수
+      // arrtime: 도착 예정 시간 (초)
+      const etaMinutes = item.arrtime
+        ? Math.ceil(Number(item.arrtime) / 60)
+        : -1;
 
       return { etaMinutes };
     } catch (e) {
