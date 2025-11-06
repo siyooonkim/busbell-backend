@@ -11,6 +11,7 @@ import {
   BusApiPort,
   LiveData,
   RouteOverview,
+  RouteStops,
 } from './interfaces/busapi.interface';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
@@ -51,8 +52,8 @@ export class BusApiService {
     return data;
   }
 
-  async getLive(routeId: string): Promise<LiveData> {
-    const key = `bus:live:${routeId}`;
+  async getRealTimeInfo(routeId: string, cityCode: number): Promise<LiveData> {
+    const key = `bus:live:${routeId}:${cityCode}`;
     const cached = await this.cache.get<LiveData>(key);
 
     if (cached) {
@@ -61,7 +62,7 @@ export class BusApiService {
     }
 
     console.log('🔵 [CACHE MISS] live');
-    const data = await this.busApi.getLive(routeId);
+    const data = await this.busApi.getRealTimeInfo(routeId, cityCode);
     await this.cache.set(key, data, 10); // 10초
     return data;
   }
@@ -71,5 +72,20 @@ export class BusApiService {
     // TODO: 공공버스 API 호출 + 파싱
     // 타임아웃/재시도도 여기서 처리
     return this.busApi.getArrivalInfo(busId, stopId);
+  }
+
+  async getRouteStops(routeId: string, cityCode: number): Promise<RouteStops> {
+    const key = `bus:route-stops:${routeId}:${cityCode}`;
+    const cached = await this.cache.get<RouteStops>(key);
+
+    if (cached) {
+      console.log('🟢 [CACHE HIT] route-stops');
+      return cached;
+    }
+
+    console.log('🔵 [CACHE MISS] route-stops');
+    const data = await this.busApi.getRouteStops(routeId, cityCode);
+    await this.cache.set(key, data, 60 * 60 * 24); // 24시간 (정류장 목록은 자주 안바뀜)
+    return data;
   }
 }

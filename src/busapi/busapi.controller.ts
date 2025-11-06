@@ -2,7 +2,12 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { BusApiService } from './busapi.service';
-import { GetEtaDto, GetBusInfoDto, SearchBusDto } from './dtos/busapi.dto';
+import {
+  GetEtaDto,
+  GetBusInfoDto,
+  SearchBusDto,
+  GetRouteStopsDto,
+} from './dtos/busapi.dto';
 
 @ApiTags('Bus API')
 @Controller('bus')
@@ -32,14 +37,14 @@ export class BusApiController {
   }
 
   // ✅ 실시간 차량 위치 조회
-  @Get('live')
+  @Get('realtime-info')
   @ApiOperation({ summary: '실시간 차량 위치 조회' })
   @ApiResponse({
     status: 200,
-    description: '현재 차량 위치 및 다음 정류장 정보 반환',
+    description: '운행 중인 모든 버스의 실시간 위치 정보 반환',
   })
-  async getLive(@Query() dto: GetBusInfoDto) {
-    return this.busApiService.getLive(dto.routeId);
+  async getRealTimeInfo(@Query() dto: GetBusInfoDto) {
+    return this.busApiService.getRealTimeInfo(dto.routeId, dto.cityCode);
   }
 
   // ✅ ETA(도착 예정 시간) 조회
@@ -51,5 +56,16 @@ export class BusApiController {
   })
   async getEta(@Query() dto: GetEtaDto) {
     return this.busApiService.getArrivalInfo(dto.busId, dto.stopId);
+  }
+
+  // ✅ 노선별 정류장 목록 조회
+  @Get('route-stops')
+  @ApiOperation({ summary: '노선별 정류장 목록 조회' })
+  @ApiResponse({
+    status: 200,
+    description: '해당 노선이 경유하는 모든 정류장 목록 (순서, 좌표 포함)',
+  })
+  async getRouteStops(@Query() dto: GetRouteStopsDto) {
+    return this.busApiService.getRouteStops(dto.routeId, dto.cityCode);
   }
 }

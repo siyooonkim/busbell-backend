@@ -7,6 +7,7 @@ import {
   BusSearchResult,
   LiveData,
   RouteOverview,
+  RouteStops,
 } from '../interfaces/busapi.interface';
 
 /**
@@ -69,7 +70,10 @@ export class TagoAdapter implements BusApiPort {
         });
 
         // 디버깅: API 응답 로그
-        this.logger.debug(`[${city.name}] Response:`, JSON.stringify(res.data, null, 2));
+        this.logger.debug(
+          `[${city.name}] Response:`,
+          JSON.stringify(res.data, null, 2),
+        );
 
         const items = Array.isArray(res.data?.response?.body?.items?.item)
           ? res.data.response.body.items.item
@@ -168,30 +172,104 @@ export class TagoAdapter implements BusApiPort {
 
   /**
    * 실시간 위치 조회
-   * - TAGO 엔드포인트:
+   * - TAGO 엔드포인트: BusLcInfoInqireService/getRouteAcctoBusLcList
+   * - 특정 노선의 운행 중인 모든 버스의 실시간 위치 정보 반환
    */
-  async getLive(routeId: string): Promise<LiveData> {
+  async getRealTimeInfo(routeId: string, cityCode: number): Promise<LiveData> {
     try {
       const url = `${this.tagoBaseUrl}/BusLcInfoInqireService/getRouteAcctoBusLcList`;
 
       const response = await this.httpClient.get(url, {
-        params: { cityCode: 25_010, routeId },
+        params: {
+          cityCode,
+          routeId,
+          numOfRows: 100, // 운행 중인 버스 최대 100대
+          pageNo: 1,
+        },
       });
 
       const items = Array.isArray(response.data?.response?.body?.items?.item)
         ? response.data.response.body.items.item
         : [response.data?.response?.body?.items?.item].filter(Boolean);
 
+      if (!items || items.length === 0) {
+        this.logger.warn(`No live data found for routeId: ${routeId}`);
+        return {
+          routeId,
+          routeName: '',
+          vehicles: [],
+        };
+      }
+
+      // 첫 번째 아이템에서 노선명 추출
+      const routeName = items[0]?.routenm || '';
+
       const vehicles = items.map((v) => ({
-        vehicleId: v.vehicleno,
-        currentStop: v.nodenm,
-        nextStop: v.nextnodenm,
-        updatedAt: v.updatetime,
+        vehicleNo: v.vehicleno,
+        nodeId: v.nodeid,
+        nodeName: v.nodenm,
+        nodeOrder: Number(v.nodeord),
+        latitude: Number(v.gpslati),
+        longitude: Number(v.gpslong),
       }));
 
-      return { routeId, vehicles };
+      this.logger.log(
+        `Found ${vehicles.length} vehicles for routeId: ${routeId}`,
+      );
+
+      return { routeId, routeName, vehicles };
     } catch (e) {
       this.logger.error(`TAGO live fetch failed: ${e.message}`);
+      throw e;
+    }
+  }
+
+  /**
+   * 노선별 정류장 목록 조회
+   * - TAGO 엔드포인트: BusRouteInfoInqireService/getRouteAcctoThrghSttnList
+   * - 특정 노선이 경유하는 모든 정류장 정보 반환 (순서, 좌표 포함)
+   */
+  async getRouteStops(routeId: string, cityCode: number): Promise<RouteStops> {
+    try {
+      const url = `${this.tagoBaseUrl}/BusRouteInfoInqireService/getRouteAcctoThrghSttnList`;
+
+      const response = await this.httpClient.get(url, {
+        params: {
+          cityCode,
+          routeId,
+          numOfRows: 999, // 최대 999개까지 한 번에 요청
+          pageNo: 1,
+        },
+      });
+
+      this.logger.debug(
+        `[getRouteStops] API Response: ${JSON.stringify(response.data, null, 2)}`,
+      );
+
+      const items = Array.isArray(response.data?.response?.body?.items?.item)
+        ? response.data.response.body.items.item
+        : [response.data?.response?.body?.items?.item].filter(Boolean);
+
+      if (!items || items.length === 0) {
+        this.logger.warn(`No stops found for routeId: ${routeId}`);
+        return { routeId, stops: [] };
+      }
+
+      this.logger.log(`Found ${items.length} stops for routeId: ${routeId}`);
+
+      const stops = items.map((item) => ({
+        stopId: item.nodeid,
+        stopName: item.nodenm,
+        stopNumber: item.nodeno,
+        sequence: Number(item.nodeord),
+        latitude: Number(item.gpslati),
+        longitude: Number(item.gpslong),
+        direction: item.updowncd === '0' ? 0 : 1,
+      }));
+
+      return { routeId, stops };
+    } catch (e) {
+      this.logger.error(`TAGO getRouteStops failed: ${e.message}`);
       throw e;
     }
   }
