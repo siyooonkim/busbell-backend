@@ -29,6 +29,9 @@ export class Notification {
   @Column({ name: 'route_id', length: 100 })
   routeId: string;
 
+  @Column({ name: 'city_code', type: 'int' })
+  cityCode: number;
+
   @Column({ name: 'bus_number', length: 20 })
   busNumber: string;
 

@@ -72,10 +72,20 @@ export class TimerService {
     }
 
     // ETA 조회
-    const { etaMinutes } = await this.busApi.getArrivalInfo(
+    const { arrivals } = await this.busApi.getArrivalInfo(
       reservation.routeId,
       reservation.stopId,
+      reservation.cityCode,
     );
+
+    // 첫 번째 도착 예정 버스의 ETA 가져오기
+    const etaMinutes = arrivals[0]?.etaMinutes ?? Infinity;
+
+    // 버스가 없으면 폴링 중지
+    if (etaMinutes === Infinity) {
+      console.log(`버스 정보 없음 (notificationId: ${notificationId})`);
+      return this.stopPollingForNotification(notificationId);
+    }
 
     // 🔹 time 모드일 때: ETA 기반 알림
     if (reservation.notificationType === 'time') {
@@ -117,7 +127,7 @@ export class TimerService {
     etaMinutes: number,
   ) {
     try {
-      // await this.fcm.sendToUser(reservation.userId, {
+      // await this.fcm.sendNotificationToUser(reservation.userId, {
       //   title: `${reservation.busId} 도착 임박`,
       //   body: `${reservation.stopId} 정류장에 곧 도착합니다.`,
       //   data: { notificationId: String(reservation.id) },

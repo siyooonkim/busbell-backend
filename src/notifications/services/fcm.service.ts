@@ -25,7 +25,7 @@ export class FcmService {
     }
   }
 
-  async sendToUser(
+  async sendNotificationToUser(
     userId: number,
     payload: { title: string; body: string; data?: Record<string, string> },
   ) {

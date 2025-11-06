@@ -19,6 +19,13 @@ export class CreateNotificationDto {
   routeId: string;
 
   @ApiProperty({
+    example: 25030,
+    description: '도시 코드 (예: 수원 25030)',
+  })
+  @IsInt({ message: 'cityCode는 정수여야 합니다' })
+  cityCode: number;
+
+  @ApiProperty({
     example: '9507',
     description: '버스 번호',
   })

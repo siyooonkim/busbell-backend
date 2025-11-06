@@ -14,7 +14,7 @@ export class NotificationsService {
     private readonly timers: TimerService,
   ) {}
 
-  async create(userId: number, dto: CreateNotificationDto) {
+  async createNotification(userId: number, dto: CreateNotificationDto) {
     const n = this.repo.create({
       ...dto,
       userId,
@@ -26,7 +26,7 @@ export class NotificationsService {
     return saved;
   }
 
-  async cancel(id: number) {
+  async cancelNotification(id: number) {
     await this.repo.update(id, {
       status: NotificationStatus.Canceled,
       nextPollAt: null,
@@ -35,7 +35,7 @@ export class NotificationsService {
     return { ok: true };
   }
 
-  async findAll(userId: number) {
+  async findAllNotifications(userId: number) {
     return this.repo.find({ where: { userId }, order: { id: 'DESC' } });
   }
 }
