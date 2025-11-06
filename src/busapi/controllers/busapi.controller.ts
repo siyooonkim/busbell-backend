@@ -1,13 +1,13 @@
 // src/busapi/busapi.controller.ts
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { BusApiService } from './busapi.service';
+import { BusApiService } from '../services/busapi.service';
 import {
   GetEtaDto,
   GetBusInfoDto,
   SearchBusDto,
   GetRouteStopsDto,
-} from './dtos/busapi.dto';
+} from '../dtos/busapi.dto';
 
 @ApiTags('Bus API')
 @Controller('bus')
@@ -52,10 +52,14 @@ export class BusApiController {
   @ApiOperation({ summary: '특정 정류장 도착 ETA 조회' })
   @ApiResponse({
     status: 200,
-    description: '해당 정류장 기준 버스 도착 예상 시간(분)',
+    description: '해당 정류장에 도착 예정인 모든 버스의 정보 반환',
   })
   async getEta(@Query() dto: GetEtaDto) {
-    return this.busApiService.getArrivalInfo(dto.busId, dto.stopId);
+    return this.busApiService.getArrivalInfo(
+      dto.routeId,
+      dto.stopId,
+      dto.cityCode,
+    );
   }
 
   // ✅ 노선별 정류장 목록 조회

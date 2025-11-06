@@ -10,11 +10,11 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt.guard';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { User } from './entities/user.entity';
-import { UserService } from './user.service';
-import { UserProfileDto } from './dtos/user-response.dto';
+import { JwtAuthGuard } from '../../auth/guards/jwt.guard';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { User } from '../entities/user.entity';
+import { UserService } from '../services/user.service';
+import { UserProfileDto } from '../dtos/user-response.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()

@@ -22,7 +22,15 @@ export interface LiveData {
 }
 
 export interface ArrivalInfo {
-  etaMinutes: number;
+  routeId: string;
+  routeName: string;
+  arrivals: Array<{
+    vehicleNo: string; // 차량번호
+    remainingStops: number; // 남은 정류장 수 (arrprevstationcnt)
+    remainingSeats: number; // 빈 좌석 수 (arrreststop)
+    etaSeconds: number; // 도착 예정 시간 (초)
+    etaMinutes: number; // 도착 예정 시간 (분)
+  }>;
 }
 
 export interface BusSearchResult {
@@ -52,6 +60,10 @@ export interface BusApiPort {
   searchBus(keyword: string): Promise<BusSearchResult[]>;
   getOverview(routeId: string): Promise<RouteOverview>;
   getRealTimeInfo(routeId: string, cityCode: number): Promise<LiveData>;
-  getArrivalInfo(busId: string, stopId: string): Promise<ArrivalInfo>;
+  getArrivalInfo(
+    routeId: string,
+    stopId: string,
+    cityCode: number,
+  ): Promise<ArrivalInfo>;
   getRouteStops(routeId: string, cityCode: number): Promise<RouteStops>;
 }

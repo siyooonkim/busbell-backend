@@ -3,11 +3,11 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { BusApiModule } from './busapi/busapi.module';
-import { UsersModule } from './users/user.module';
-import { NotificationsModule } from './notifications/notification.module';
+import { BusApiModule } from './busapi/modules/busapi.module';
+import { UsersModule } from './users/modules/user.module';
+import { NotificationsModule } from './notifications/modules/notification.module';
 import { ScheduleModule } from '@nestjs/schedule';
-import { AuthModule } from './auth/auth.module';
+import { AuthModule } from './auth/modules/auth.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
 

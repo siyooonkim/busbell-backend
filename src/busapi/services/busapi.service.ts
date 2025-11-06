@@ -5,14 +5,14 @@
 // 파사드(서비스): 바깥에서 쓰기 쉽게 얇은 래퍼. 내부 어댑터를 감추고 공통 메서드만 노출. (예: BusApiService)
 
 import { Inject, Injectable } from '@nestjs/common';
-import { BUS_API_TOKEN } from './constants/busapi.token';
+import { BUS_API_TOKEN } from '../constants/busapi.token';
 import {
   ArrivalInfo,
   BusApiPort,
   LiveData,
   RouteOverview,
   RouteStops,
-} from './interfaces/busapi.interface';
+} from '../interfaces/busapi.interface';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 
@@ -67,11 +67,23 @@ export class BusApiService {
     return data;
   }
 
-  // ETA(분)만 리턴. 실제 API 붙일 때 여기만 고치면 나머지는 그대로 작동.
-  async getArrivalInfo(busId: string, stopId: string): Promise<ArrivalInfo> {
-    // TODO: 공공버스 API 호출 + 파싱
-    // 타임아웃/재시도도 여기서 처리
-    return this.busApi.getArrivalInfo(busId, stopId);
+  async getArrivalInfo(
+    routeId: string,
+    stopId: string,
+    cityCode: number,
+  ): Promise<ArrivalInfo> {
+    const key = `bus:eta:${routeId}:${stopId}:${cityCode}`;
+    const cached = await this.cache.get<ArrivalInfo>(key);
+
+    if (cached) {
+      console.log('🟢 [CACHE HIT] eta');
+      return cached;
+    }
+
+    console.log('🔵 [CACHE MISS] eta');
+    const data = await this.busApi.getArrivalInfo(routeId, stopId, cityCode);
+    await this.cache.set(key, data, 30); // 30초 캐시
+    return data;
   }
 
   async getRouteStops(routeId: string, cityCode: number): Promise<RouteStops> {

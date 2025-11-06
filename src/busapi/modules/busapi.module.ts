@@ -2,10 +2,10 @@
 
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
-import { BusApiService } from './busapi.service';
-import { BUS_API_TOKEN } from './constants/busapi.token';
-import { TagoAdapter } from './adapters/tago.adapter';
-import { BusApiController } from './busapi.controller';
+import { BusApiService } from '../services/busapi.service';
+import { BUS_API_TOKEN } from '../constants/busapi.token';
+import { TagoAdapter } from '../adapters/tago.adapter';
+import { BusApiController } from '../controllers/busapi.controller';
 
 @Module({
   imports: [HttpModule],

@@ -16,8 +16,8 @@ import {
   ApiBody,
   ApiParam,
 } from '@nestjs/swagger';
-import { NotificationsService } from './notification.service';
-import { CreateNotificationDto } from './dtos/create-notifications.dto';
+import { NotificationsService } from '../services/notification.service';
+import { CreateNotificationDto } from '../dtos/create-notifications.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
 
 @ApiTags('Notifications')

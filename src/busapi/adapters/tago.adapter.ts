@@ -38,8 +38,6 @@ export class TagoAdapter implements BusApiPort {
     });
   }
   /**
-   * ⭐️ 여기부터 api테스트부터, 이제[ 어떤 api 의 정보가 피요한지 어떤 순서대로 할지 정해야함
-   * 그러기위해 앱 사용 시나리오에 따라서 정해야할듯
    * 버스 번호 검색
    * - TAGO: BusRouteInfoInquireService/getRouteNoList
    * - keyword로 버스번호 검색 시 지역별 노선 리스트 반환
@@ -101,18 +99,24 @@ export class TagoAdapter implements BusApiPort {
 
   /**
    * ETA(도착예정시간) 조회
-   * - stopId(정류장ID), busId(노선ID)를 받아 도착 예상 시간(분) 반환
+   * - stopId(정류장ID), routeId(노선ID)를 받아 도착 예상 시간 반환
    * - TAGO 엔드포인트: ArvlInfoInqireService/getSttnAcctoSpcifyRouteBusArvlPrearngeInfoList
    */
-  async getArrivalInfo(routeId: string, nodeId: string): Promise<ArrivalInfo> {
+  async getArrivalInfo(
+    routeId: string,
+    nodeId: string,
+    cityCode: number,
+  ): Promise<ArrivalInfo> {
     try {
       const url = `${this.tagoBaseUrl}/ArvlInfoInqireService/getSttnAcctoSpcifyRouteBusArvlPrearngeInfoList`;
 
       const response = await this.httpClient.get(url, {
         params: {
-          cityCode: 31000, // 도시코드 (31000: 경기)
+          cityCode,
           nodeId, // 정류장 ID
           routeId, // 노선 ID
+          numOfRows: 10, // 최대 10대까지
+          pageNo: 1,
         },
       });
 
@@ -121,19 +125,32 @@ export class TagoAdapter implements BusApiPort {
         : [response.data?.response?.body?.items?.item].filter(Boolean);
 
       if (!items || items.length === 0) {
-        return { etaMinutes: -1 };
+        this.logger.warn(
+          `No arrival info for routeId=${routeId}, nodeId=${nodeId}`,
+        );
+        return {
+          routeId,
+          routeName: '',
+          arrivals: [],
+        };
       }
 
-      // 첫 번째 도착 예정 버스 정보 사용
-      const item = items[0];
+      // 첫 번째 아이템에서 노선명 추출
+      const routeName = items[0]?.routeno || '';
 
-      // arrprevstationcnt: 남은 정류장 수
-      // arrtime: 도착 예정 시간 (초)
-      const etaMinutes = item.arrtime
-        ? Math.ceil(Number(item.arrtime) / 60)
-        : -1;
+      const arrivals = items.map((item) => ({
+        vehicleNo: item.vehicleno || '',
+        remainingStops: Number(item.arrprevstationcnt || 0),
+        remainingSeats: Number(item.reststopseat || 0),
+        etaSeconds: Number(item.arrtime || 0),
+        etaMinutes: item.arrtime ? Math.ceil(Number(item.arrtime) / 60) : 0,
+      }));
 
-      return { etaMinutes };
+      this.logger.log(
+        `Found ${arrivals.length} arrivals for routeId=${routeId}, nodeId=${nodeId}`,
+      );
+
+      return { routeId, routeName, arrivals };
     } catch (e) {
       this.logger.error(`🚨 TAGO ETA fetch error: ${e.message}`);
       throw e;

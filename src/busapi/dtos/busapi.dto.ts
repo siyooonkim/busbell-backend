@@ -35,7 +35,7 @@ export class GetEtaDto {
     description: '버스 노선 ID',
   })
   @IsString()
-  busId: string;
+  routeId: string;
 
   @ApiProperty({
     example: 'DJB8001793',
@@ -43,6 +43,14 @@ export class GetEtaDto {
   })
   @IsString()
   stopId: string;
+
+  @ApiProperty({
+    example: 31020,
+    description: '도시 코드 (예: 31020-성남시, 31010-수원시, 11-서울)',
+  })
+  @IsNumber()
+  @Type(() => Number)
+  cityCode: number;
 }
 
 export class GetRouteStopsDto {

@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Auth } from '../auth/entities/auth.entity';
+import { Auth } from '../../auth/entities/auth.entity';
 
 @Injectable()
 export class FcmService {
