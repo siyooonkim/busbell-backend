@@ -16,16 +16,9 @@ export class LoginDto {
   @IsString()
   password: string;
 
-  @ApiProperty({
-    example: 'DEVICE_UUID_12345',
-    description: '기기 고유 ID',
-  })
-  @IsString()
-  deviceId: string;
-
   @ApiPropertyOptional({
     example: 'fcm_token_from_firebase',
-    description: 'FCM 푸시 토큰',
+    description: 'FCM 푸시 토큰 (선택)',
   })
   @IsOptional()
   @IsString()

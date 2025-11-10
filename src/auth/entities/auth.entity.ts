@@ -11,7 +11,7 @@ import {
 import { User } from '../../users/entities/user.entity';
 
 @Entity('auth')
-@Index(['userId', 'deviceId'], { unique: true })
+@Index(['userId'], { unique: true })
 export class Auth {
   @PrimaryGeneratedColumn()
   id: number;
@@ -21,9 +21,6 @@ export class Auth {
 
   @Column({ name: 'fcm_token', nullable: true })
   fcmToken: string | null;
-
-  @Column({ name: 'device_id', length: 255 })
-  deviceId: string;
 
   @Column({ name: 'refresh_token_hash', length: 255 })
   @Index()

@@ -8,11 +8,4 @@ export class RefreshTokenDto {
   })
   @IsString()
   refreshToken: string;
-
-  @ApiProperty({
-    example: 'device-12345',
-    description: '디바이스 ID',
-  })
-  @IsString()
-  deviceId: string;
 }

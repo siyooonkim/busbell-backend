@@ -48,7 +48,7 @@ export class AuthService {
 
     await this.userRepo.save(user);
 
-    // 4. 토큰 생성
+    // 4. 토큰 생성 (deviceId 미포함 - signup은 device 정보 없음)
     const tokens = await this.generateTokens(user.id, user.email);
 
     // 5. 응답
@@ -94,12 +94,7 @@ export class AuthService {
     const tokens = await this.generateTokens(user.id, user.email);
 
     // 4. Auth 레코드 생성/업데이트
-    await this.saveAuthSession(
-      user.id,
-      dto.deviceId,
-      tokens.refreshToken,
-      dto.fcmToken, // 👈 FCM 토큰 전달!
-    );
+    await this.saveAuthSession(user.id, tokens.refreshToken, dto.fcmToken);
 
     // 5. 응답
     return {
@@ -116,10 +111,10 @@ export class AuthService {
   /**
    * 로그아웃
    */
-  async logout(userId: number, deviceId: string): Promise<{ message: string }> {
+  async logout(userId: number): Promise<{ message: string }> {
     // Auth 레코드 비활성화
     const authRecord = await this.authRepo.findOne({
-      where: { userId, deviceId, isActive: true },
+      where: { userId, isActive: true },
     });
 
     if (authRecord) {
@@ -134,18 +129,17 @@ export class AuthService {
   /**
    * 토큰 갱신
    */
-  async refresh(refreshToken: string, deviceId: string): Promise<TokensDto> {
+  async refresh(refreshToken: string): Promise<TokensDto> {
     try {
       // 1. Refresh Token 검증
       const payload = this.jwtService.verify(refreshToken, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
 
-      // 2. 특정 기기의 Auth 레코드 확인
+      // 2. Auth 레코드 확인
       const authRecord = await this.authRepo.findOne({
         where: {
           userId: payload.sub,
-          deviceId,
           isActive: true,
         },
       });
@@ -154,7 +148,7 @@ export class AuthService {
         throw new UnauthorizedException('유효하지 않은 Refresh Token입니다');
       }
 
-      // 3. Refresh Token 해시 비교
+      // 4. Refresh Token 해시 비교
       const isMatch = await bcrypt.compare(
         refreshToken,
         authRecord.refreshTokenHash,
@@ -164,15 +158,15 @@ export class AuthService {
         throw new UnauthorizedException('유효하지 않은 Refresh Token입니다');
       }
 
-      // 4. Refresh Token 만료 확인
+      // 5. Refresh Token 만료 확인
       if (new Date() > authRecord.refreshExpiresAt) {
         throw new UnauthorizedException('Refresh Token이 만료되었습니다');
       }
 
-      // 5. 새 토큰 생성
+      // 6. 새 토큰 생성
       const tokens = await this.generateTokens(payload.sub, payload.email);
 
-      // 6. Refresh Token 업데이트 (Rotation)
+      // 7. Refresh Token 업데이트 (Rotation)
       await this.updateRefreshToken(authRecord.id, tokens.refreshToken);
 
       return tokens;
@@ -213,7 +207,6 @@ export class AuthService {
    */
   private async saveAuthSession(
     userId: number,
-    deviceId: string,
     refreshToken: string,
     fcmToken?: string,
   ): Promise<void> {
@@ -224,7 +217,7 @@ export class AuthService {
 
     // 기존 세션 확인
     let authRecord = await this.authRepo.findOne({
-      where: { userId, deviceId },
+      where: { userId },
     });
 
     if (authRecord) {
@@ -242,7 +235,6 @@ export class AuthService {
       // 생성
       authRecord = this.authRepo.create({
         userId,
-        deviceId,
         refreshTokenHash,
         refreshExpiresAt,
         lastLoginAt: new Date(),

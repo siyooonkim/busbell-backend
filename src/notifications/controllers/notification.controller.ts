@@ -2,6 +2,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -34,21 +35,30 @@ export class NotificationsController {
     status: 201,
     description: '알림이 예약되었습니다.',
   })
+  @ApiResponse({
+    status: 409,
+    description: '이미 예약된 알림이 있습니다.',
+  })
   async createNotification(@Req() req, @Body() dto: CreateNotificationDto) {
-    const userId = req.user?.userId; // JWT 연결 전 fallback
+    if (!req.user || !req.user.userId) {
+      throw new Error('인증 필요: JWT 토큰이 없거나 유효하지 않습니다');
+    }
+
+    const userId = req.user.userId;
+    console.log('✅ User ID:', userId);
     return this.notificationService.createNotification(userId, dto);
   }
 
-  // ✅ 알림 취소
-  @Post(':id/cancel')
+  @Delete(':id')
   @ApiOperation({ summary: '예약된 버스 알림 취소' })
-  @ApiParam({ name: 'id', example: 123, description: '알림 ID' })
+  @ApiParam({ name: 'id', example: 1, description: '알림 ID' })
   @ApiResponse({ status: 200, description: '알림이 취소되었습니다.' })
-  async cancelNotification(@Param('id') id: string) {
-    return this.notificationService.cancelNotification(Number(id));
+  @ApiResponse({ status: 404, description: '알림을 찾을 수 없습니다.' })
+  async cancelNotification(@Req() req, @Param('id') id: string) {
+    const userId = req.user.userId;
+    return this.notificationService.cancelNotification(Number(id), userId);
   }
 
-  // ✅ 내 알림 목록 조회
   @Get()
   @ApiOperation({ summary: '내 예약된 알림 목록 조회' })
   @ApiResponse({
@@ -56,7 +66,7 @@ export class NotificationsController {
     description: '내 예약된 알림 리스트 반환',
   })
   async findAllNotifications(@Req() req: any) {
-    const userId = req.user?.userId || 1;
+    const userId = req.user.userId;
     return this.notificationService.findAllNotifications(userId);
   }
 }

@@ -19,7 +19,6 @@ import { User } from '../../users/entities/user.entity';
 import {
   SignupDto,
   LoginDto,
-  LogoutDto,
   RefreshTokenDto,
   AuthResponseDto,
   TokensDto,
@@ -63,11 +62,8 @@ export class AuthController {
   @ApiOperation({ summary: '로그아웃' })
   @ApiResponse({ status: 200, description: '로그아웃 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
-  async logout(
-    @CurrentUser() user: User,
-    @Body() dto: LogoutDto,
-  ): Promise<{ message: string }> {
-    return this.authService.logout(user.id, dto.deviceId);
+  async logout(@CurrentUser() user: User): Promise<{ message: string }> {
+    return this.authService.logout(user.id);
   }
 
   @Post('refresh')
@@ -80,6 +76,6 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: '유효하지 않은 Refresh Token' })
   async refresh(@Body() dto: RefreshTokenDto): Promise<TokensDto> {
-    return this.authService.refresh(dto.refreshToken, dto.deviceId);
+    return this.authService.refresh(dto.refreshToken);
   }
 }
