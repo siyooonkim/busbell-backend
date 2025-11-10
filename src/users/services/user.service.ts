@@ -28,8 +28,22 @@ export class UserService {
   }
 
   async softDelete(id: number) {
-    // isActive를 false로 설정
-    await this.usersRepo.update({ id }, { isActive: false });
+    // 1. 유저 존재 여부 확인
+    const user = await this.usersRepo.findOne({ where: { id } });
+
+    if (!user) {
+      throw new NotFoundException('유저를 찾을 수 없습니다');
+    }
+
+    // 2. 이미 탈퇴한 유저인지 확인
+    if (!user.isActive) {
+      throw new NotFoundException('이미 탈퇴한 유저입니다');
+    }
+
+    // 3. isActive를 false로 설정
+    user.isActive = false;
+    await this.usersRepo.save(user);
+
     return { message: '회원 탈퇴 완료' };
   }
 }
