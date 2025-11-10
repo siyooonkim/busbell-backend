@@ -1,4 +1,9 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from '../entities/notification.entity';
@@ -29,7 +34,25 @@ export class NotificationsService {
       );
     }
 
-    // 2. 알림 만료 시간 설정 (생성 시점으로부터 24시간 후)
+    // 2. time 모드인 경우 실시간 버스 ETA 검증
+    if (dto.notificationType === 'time' && dto.minutesBefore) {
+      const validation = await this.timers.validateInitialEta(
+        dto.routeId,
+        dto.stopId,
+        dto.cityCode,
+        dto.minutesBefore,
+      );
+
+      if (!validation.valid) {
+        throw new BadRequestException(validation.error);
+      }
+
+      console.log(
+        `✅ ETA 검증 통과: 버스 도착 ${validation.etaMinutes}분, 알림 ${dto.minutesBefore}분 전`,
+      );
+    }
+
+    // 3. 알림 만료 시간 설정 (생성 시점으로부터 24시간 후)
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
 
@@ -38,7 +61,7 @@ export class NotificationsService {
       ...dto,
       status: NotificationStatus.Reserved,
       nextPollAt: new Date(), // 즉시 한 번 확인
-      expiresAt, // 만료 시간 설정
+      expiresAt, // 만료  설정
     });
     const saved = await this.notificationRepo.save(n);
     await this.timers.startPollingForNotification(saved.id);

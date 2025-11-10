@@ -38,6 +38,51 @@ export class TimerService {
     private readonly fcm: FcmService, // FCM 발송용
   ) {}
 
+  /**
+   * 알림 생성 시 초기 검증: 버스 ETA가 요청한 시간보다 충분한지 확인
+   */
+  async validateInitialEta(
+    routeId: string,
+    stopId: string,
+    cityCode: number,
+    minutesBefore: number,
+  ): Promise<{ valid: boolean; etaMinutes?: number; error?: string }> {
+    try {
+      const { arrivals } = await this.busApi.getArrivalInfo(
+        routeId,
+        stopId,
+        cityCode,
+      );
+
+      // 버스가 없는 경우
+      if (!arrivals || arrivals.length === 0) {
+        return {
+          valid: false,
+          error: '현재 운행 중인 버스가 없습니다.',
+        };
+      }
+
+      const etaMinutes = arrivals[0].etaMinutes;
+
+      // ETA가 요청한 시간보다 작으면 불가
+      if (etaMinutes < minutesBefore) {
+        return {
+          valid: false,
+          etaMinutes,
+          error: `버스 도착 예정 시간(${etaMinutes}분)이 요청한 알림 시간(${minutesBefore}분 전)보다 짧습니다.`,
+        };
+      }
+
+      return { valid: true, etaMinutes };
+    } catch (error) {
+      console.error('Initial ETA validation error:', error);
+      return {
+        valid: false,
+        error: '버스 정보를 조회할 수 없습니다.',
+      };
+    }
+  }
+
   /** 특정 알림(notificationId)에 대한 폴링 시작 */
   async startPollingForNotification(notificationId: number) {
     // 기존 타이머 중복 방지

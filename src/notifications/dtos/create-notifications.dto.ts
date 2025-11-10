@@ -66,12 +66,12 @@ export class CreateNotificationDto {
 
   @ApiPropertyOptional({
     example: 5,
-    description: '몇 분 전 알림 (1-30분, time 모드일 때 필수)',
+    description: '몇 분 전 알림 (1-20분, time 모드일 때 필수)',
   })
   @ValidateIf((o) => o.notificationType === NotificationType.Time)
   @IsInt({ message: 'minutesBefore는 정수여야 합니다' })
   @Min(1, { message: 'minutesBefore는 최소 1분입니다' })
-  @Max(30, { message: 'minutesBefore는 최대 30분입니다' })
+  @Max(20, { message: 'minutesBefore는 최대 20분입니다' })
   minutesBefore?: number;
 
   @ApiPropertyOptional({

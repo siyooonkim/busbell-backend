@@ -36,6 +36,10 @@ export class NotificationsController {
     description: '알림이 예약되었습니다.',
   })
   @ApiResponse({
+    status: 400,
+    description: '잘못된 요청 (minutesBefore는 1-20분 범위)',
+  })
+  @ApiResponse({
     status: 409,
     description: '이미 예약된 알림이 있습니다.',
   })
@@ -45,7 +49,6 @@ export class NotificationsController {
     }
 
     const userId = req.user.userId;
-    console.log('✅ User ID:', userId);
     return this.notificationService.createNotification(userId, dto);
   }
 
