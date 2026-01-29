@@ -53,18 +53,9 @@ export class BusApiService {
   }
 
   async getRealTimeInfo(routeId: string, cityCode: number): Promise<LiveData> {
-    const key = `bus:live:${routeId}:${cityCode}`;
-    const cached = await this.cache.get<LiveData>(key);
-
-    if (cached) {
-      console.log('🟢 [CACHE HIT] live');
-      return cached;
-    }
-
-    console.log('🔵 [CACHE MISS] live');
-    const data = await this.busApi.getRealTimeInfo(routeId, cityCode);
-    await this.cache.set(key, data, 10); // 10초
-    return data;
+    // 캐시 임시 비활성화 (디버깅용)
+    console.log('🔵 [NO CACHE] live');
+    return this.busApi.getRealTimeInfo(routeId, cityCode);
   }
 
   async getArrivalInfo(
@@ -72,18 +63,9 @@ export class BusApiService {
     stopId: string,
     cityCode: number,
   ): Promise<ArrivalInfo> {
-    const key = `bus:eta:${routeId}:${stopId}:${cityCode}`;
-    const cached = await this.cache.get<ArrivalInfo>(key);
-
-    if (cached) {
-      console.log('🟢 [CACHE HIT] eta');
-      return cached;
-    }
-
-    console.log('🔵 [CACHE MISS] eta');
-    const data = await this.busApi.getArrivalInfo(routeId, stopId, cityCode);
-    await this.cache.set(key, data, 30); // 30초 캐시
-    return data;
+    // 캐시 임시 비활성화 (디버깅용)
+    console.log('🔵 [NO CACHE] eta');
+    return this.busApi.getArrivalInfo(routeId, stopId, cityCode);
   }
 
   async getRouteStops(routeId: string, cityCode: number): Promise<RouteStops> {

@@ -133,12 +133,39 @@ export class TimerService implements OnModuleInit {
       return;
     }
 
-    this.logger.log(`[${corrId}] 1초 후 첫 폴링 시작 예약`);
-    const handle = setTimeout(() => {
-      this.logger.log(`[${corrId}] 첫 폴링 실행 시작`);
-      this.runPollingLoop(notificationId);
-    }, 1000);
-    this.activeTimersByNotificationId.set(notificationId, handle);
+    try {
+      const { arrivals } = await this.busApi.getArrivalInfo(
+        reservation.routeId,
+        reservation.stopId,
+        reservation.cityCode,
+      );
+
+      const etaMinutes = arrivals[0]?.etaMinutes ?? 0;
+      const minutesBefore = reservation.minutesBefore ?? 0;
+      const delayMs = computeSimplePollDelayMs(etaMinutes, minutesBefore);
+
+      if (delayMs <= 0) {
+        this.logger.log(`[${corrId}] 즉시 체크 실행 (ETA: ${etaMinutes}분, 설정: ${minutesBefore}분 전)`);
+        this.runPollingLoop(notificationId);
+        return;
+      }
+
+      const delayMinutes = Math.round(delayMs / 60000);
+      this.logger.log(`[${corrId}] ${delayMinutes}분 후 체크 예약 (ETA: ${etaMinutes}분, 설정: ${minutesBefore}분 전)`);
+      
+      const handle = setTimeout(() => {
+        this.logger.log(`[${corrId}] 예약된 체크 실행 시작`);
+        this.runPollingLoop(notificationId);
+      }, delayMs);
+      this.activeTimersByNotificationId.set(notificationId, handle);
+    } catch (error) {
+      this.logger.error(`[${corrId}] 초기 ETA 조회 실패: ${error.message}`);
+      this.logger.log(`[${corrId}] 1분 후 재시도 예약`);
+      const handle = setTimeout(() => {
+        this.runPollingLoop(notificationId);
+      }, 60000);
+      this.activeTimersByNotificationId.set(notificationId, handle);
+    }
   }
 
   stopPollingForNotification(notificationId: number) {
@@ -150,12 +177,10 @@ export class TimerService implements OnModuleInit {
 
   private async runPollingLoop(notificationId: number) {
     const corrId = this.correlationIdsByNotificationId.get(notificationId) || 'unknown';
-    this.logger.log(`[${corrId}] 1회 체크 실행 - notificationId: ${notificationId}`);
-    
-    let reservation: Notification | null = null;
+    this.logger.log(`[${corrId}] 알림 발송 시작 - notificationId: ${notificationId}`);
     
     try {
-      reservation = await this.notificationRepo.findOneBy({
+      const reservation = await this.notificationRepo.findOneBy({
         id: notificationId,
       });
 
@@ -169,48 +194,9 @@ export class TimerService implements OnModuleInit {
         return this.stopPollingForNotification(notificationId);
       }
 
-      this.logger.log(`[${corrId}] ETA 조회 중 - routeId: ${reservation.routeId}, stopId: ${reservation.stopId}`);
-
-      const { arrivals } = await this.busApi.getArrivalInfo(
-        reservation.routeId,
-        reservation.stopId,
-        reservation.cityCode,
-      );
-
-      const etaMinutes = arrivals[0]?.etaMinutes ?? Infinity;
-      this.logger.log(`[${corrId}] ETA 조회 결과 - ${arrivals.length}대 도착 예정, 첫 번째 ETA: ${etaMinutes === Infinity ? '없음' : etaMinutes + '분'}`);
-
-      if (etaMinutes === Infinity) {
-        this.logger.warn(`[${corrId}] 버스 정보 없음 - 실패 푸시 발송`);
-        await this.sendFailureNotification(reservation, corrId, '버스 정보 없음');
-        return;
-      }
-
-      if (reservation.notificationType === 'time') {
-        const minutesBefore = reservation.minutesBefore ?? 0;
-        const shouldNotify = etaMinutes <= minutesBefore;
-
-        this.logger.log(`[${corrId}] 조건 판단 - ETA: ${etaMinutes}분, 설정: ${minutesBefore}분 전, 발송 여부: ${shouldNotify}`);
-
-        if (shouldNotify) {
-          await this.sendArrivalNotification(reservation, etaMinutes, corrId);
-          return;
-        }
-
-        this.logger.warn(`[${corrId}] 조건 미충족 (ETA: ${etaMinutes}분 > 설정: ${minutesBefore}분) - 실패 푸시 발송`);
-        await this.sendFailureNotification(reservation, corrId, '조건 미충족');
-        return;
-      }
-
-      if (reservation.notificationType === 'stops') {
-        this.logger.warn(`[${corrId}] stops 모드는 아직 미구현 - 실패 푸시 발송`);
-        await this.sendFailureNotification(reservation, corrId, 'stops 모드 미구현');
-      }
+      await this.sendArrivalNotification(reservation, reservation.minutesBefore ?? 0, corrId);
     } catch (error) {
-      this.logger.error(`[${corrId}] 체크 에러: ${error.message}`, error.stack);
-      if (reservation) {
-        await this.sendFailureNotification(reservation, corrId, 'API 오류');
-      }
+      this.logger.error(`[${corrId}] 발송 에러: ${error.message}`, error.stack);
     }
   }
 
