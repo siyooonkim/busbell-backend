@@ -37,8 +37,14 @@ export interface BusSearchResult {
   routeId: string;
   busNumber: string;
   regionName: string;
+  cityCode: number;
   startStop: string;
   endStop: string;
+}
+
+export interface CityInfo {
+  cityCode: number;
+  cityName: string;
 }
 
 export interface BusStop {
@@ -58,7 +64,7 @@ export interface RouteStops {
 
 export interface BusApiPort {
   searchBus(keyword: string): Promise<BusSearchResult[]>;
-  getOverview(routeId: string): Promise<RouteOverview>;
+  getOverview(routeId: string, cityCode: number): Promise<RouteOverview>;
   getRealTimeInfo(routeId: string, cityCode: number): Promise<LiveData>;
   getArrivalInfo(
     routeId: string,

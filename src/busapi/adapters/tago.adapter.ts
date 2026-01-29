@@ -5,6 +5,7 @@ import {
   ArrivalInfo,
   BusApiPort,
   BusSearchResult,
+  CityInfo,
   LiveData,
   RouteOverview,
   RouteStops,
@@ -19,24 +20,47 @@ import {
 export class TagoAdapter implements BusApiPort {
   private readonly logger = new Logger(TagoAdapter.name);
   private readonly httpClient: AxiosInstance;
-  private readonly tagoBaseUrl = 'https://apis.data.go.kr/1613000';
   private readonly serviceKey: string;
+  private readonly tagoBaseUrl: string;
+
+  // 주요 도시 목록 (static)
+  // Note: 서울(11)은 TAGO에서 미지원이나 호환성 유지를 위해 보존
+  private readonly MAJOR_CITIES: CityInfo[] = [
+    { cityCode: 11, cityName: '서울' },
+    { cityCode: 31010, cityName: '수원시' },
+    { cityCode: 31020, cityName: '성남시' },
+    { cityCode: 31100, cityName: '고양시' },
+    { cityCode: 31190, cityName: '용인시' },
+    { cityCode: 31050, cityName: '부천시' },
+    { cityCode: 31060, cityName: '안산시' },
+    { cityCode: 31080, cityName: '안양시' },
+    { cityCode: 31090, cityName: '남양주시' },
+    { cityCode: 31110, cityName: '의정부시' },
+  ];
 
   constructor() {
     // .env에 등록된 TAGO 서비스키 사용
     this.serviceKey = process.env.TAGO_SERVICE_KEY || '';
+    this.tagoBaseUrl = process.env.TAGO_BASE_URL || '';
     if (!this.serviceKey) {
-      this.logger.warn('⚠️ TAGO_SERVICE_KEY not found in environment');
+      this.logger.warn('TAGO_SERVICE_KEY not found in environment');
+    }
+    if (!this.tagoBaseUrl) {
+      this.logger.warn(
+        'TAGO_BASE_URL not found in environment',
+        this.tagoBaseUrl,
+      );
     }
 
     this.httpClient = axios.create({
-      timeout: 5000,
+      timeout: 15000, // 5초 → 15초로 증가
       params: {
         serviceKey: this.serviceKey,
         _type: 'json',
       },
     });
   }
+
   /**
    * 버스 번호 검색
    * - TAGO: BusRouteInfoInquireService/getRouteNoList
@@ -46,30 +70,23 @@ export class TagoAdapter implements BusApiPort {
     try {
       const url = `${this.tagoBaseUrl}/BusRouteInfoInqireService/getRouteNoList`;
 
-      // 현재 버전은 예시로 주요 도시만 순회
-      const cityList = [
-        { name: '수원시', code: 31010 },
-        { name: '성남시', code: 31020 },
-        { name: '의정부시', code: 31030 },
-        { name: '안양시', code: 31040 },
-        { name: '부천시', code: 31050 },
-        { name: '서울', code: 11 },
-        { name: '인천', code: 23 },
-      ];
+      this.logger.log(
+        `Searching bus '${keyword}' across ${this.MAJOR_CITIES.length} cities`,
+      );
 
       const results: BusSearchResult[] = [];
 
-      for (const city of cityList) {
+      for (const city of this.MAJOR_CITIES) {
         const res = await this.httpClient.get(url, {
           params: {
-            cityCode: city.code,
+            cityCode: city.cityCode,
             routeNo: keyword,
           },
         });
 
         // 디버깅: API 응답 로그
         this.logger.debug(
-          `[${city.name}] Response:`,
+          `[${city.cityName}] Response:`,
           JSON.stringify(res.data, null, 2),
         );
 
@@ -77,19 +94,24 @@ export class TagoAdapter implements BusApiPort {
           ? res.data.response.body.items.item
           : [res.data?.response?.body?.items?.item].filter(Boolean);
 
-        this.logger.debug(`[${city.name}] Found ${items.length} items`);
+        this.logger.debug(`[${city.cityName}] Found ${items.length} items`);
+
+
 
         for (const item of items) {
+          console.log(item)
           results.push({
             routeId: item.routeid,
             busNumber: item.routeno,
-            regionName: city.name,
+            regionName: city.cityName,
+            cityCode: city.cityCode,
             startStop: item.startnodenm,
             endStop: item.endnodenm,
           });
         }
       }
 
+      this.logger.log(`Total ${results.length} routes found for '${keyword}'`);
       return results;
     } catch (e) {
       this.logger.error(`TAGO searchBus failed: ${e.message}`);
@@ -161,12 +183,12 @@ export class TagoAdapter implements BusApiPort {
    * 노선 기본정보 조회
    * - TAGO 엔드포인트: BusRouteInfoInquireService/getRouteInfoItem
    */
-  async getOverview(routeId: string): Promise<RouteOverview> {
+  async getOverview(routeId: string, cityCode: number): Promise<RouteOverview> {
     try {
       const url = `${this.tagoBaseUrl}/BusRouteInfoInquireService/getRouteInfoItem`;
 
       const response = await this.httpClient.get(url, {
-        params: { cityCode: 25_010, routeId },
+        params: { cityCode, routeId },
       });
 
       const item = response.data?.response?.body?.items?.item;
@@ -274,6 +296,13 @@ export class TagoAdapter implements BusApiPort {
 
       this.logger.log(`Found ${items.length} stops for routeId: ${routeId}`);
 
+      // API 응답 필드 확인용 로그 (첫 번째 아이템만)
+      if (items.length > 0) {
+        this.logger.debug(
+          `[getRouteStops] 첫 번째 정류장 데이터: ${JSON.stringify(items[0], null, 2)}`,
+        );
+      }
+
       const stops = items.map((item) => ({
         stopId: item.nodeid,
         stopName: item.nodenm,
@@ -281,7 +310,11 @@ export class TagoAdapter implements BusApiPort {
         sequence: Number(item.nodeord),
         latitude: Number(item.gpslati),
         longitude: Number(item.gpslong),
-        direction: item.updowncd === '0' ? 0 : 1,
+        // updowncd 필드가 있으면 사용, 없으면 0 (상행) 기본값
+        // updowncd: "0" = 상행, "1" = 하행
+        direction: item.updowncd !== undefined
+          ? (Number(item.updowncd) as 0 | 1)
+          : 0,
       }));
 
       return { routeId, stops };

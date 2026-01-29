@@ -37,7 +37,7 @@ export class UserController {
 
   // ✅ 회원 탈퇴
   @Delete()
-  @ApiOperation({ summary: '회원 탈퇴 (Soft Delete)' })
+  @ApiOperation({ summary: '회원 탈퇴 ' })
   @ApiResponse({ status: 200, description: '탈퇴 완료' })
   @ApiResponse({ status: 404, description: '유저를 찾을 수 없습니다' })
   async deleteUser(@CurrentUser() user: User) {

@@ -36,6 +36,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('탈퇴한 유저입니다');
     }
 
-    return { userId: user.id, email: user.email };
+    // User 엔티티 전체를 반환 (request.user로 사용됨)
+    return user;
   }
 }

@@ -37,8 +37,8 @@ export class BusApiService {
     return data;
   }
 
-  async getOverview(routeId: string): Promise<RouteOverview> {
-    const key = `bus:overview:${routeId}`;
+  async getOverview(routeId: string, cityCode: number): Promise<RouteOverview> {
+    const key = `bus:overview:${cityCode}:${routeId}`;
     const cached = await this.cache.get<RouteOverview>(key);
 
     if (cached) {
@@ -47,7 +47,7 @@ export class BusApiService {
     }
 
     console.log('🔵 [CACHE MISS] overview');
-    const data = await this.busApi.getOverview(routeId);
+    const data = await this.busApi.getOverview(routeId, cityCode);
     await this.cache.set(key, data, 60 * 60 * 6); // 6시간
     return data;
   }

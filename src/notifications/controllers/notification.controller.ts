@@ -6,7 +6,6 @@ import {
   Get,
   Param,
   Post,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -20,6 +19,8 @@ import {
 import { NotificationsService } from '../services/notification.service';
 import { CreateNotificationDto } from '../dtos/create-notifications.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { User } from 'src/users/entities/user.entity';
 
 @ApiTags('Notifications')
 @ApiBearerAuth() // JWT 필요
@@ -43,13 +44,11 @@ export class NotificationsController {
     status: 409,
     description: '이미 예약된 알림이 있습니다.',
   })
-  async createNotification(@Req() req, @Body() dto: CreateNotificationDto) {
-    if (!req.user || !req.user.userId) {
-      throw new Error('인증 필요: JWT 토큰이 없거나 유효하지 않습니다');
-    }
-
-    const userId = req.user.userId;
-    return this.notificationService.createNotification(userId, dto);
+  async createNotification(
+    @CurrentUser() user: User,
+    @Body() dto: CreateNotificationDto,
+  ) {
+    return this.notificationService.createNotification(user.id, dto);
   }
 
   @Delete(':id')
@@ -57,9 +56,11 @@ export class NotificationsController {
   @ApiParam({ name: 'id', example: 1, description: '알림 ID' })
   @ApiResponse({ status: 200, description: '알림이 취소되었습니다.' })
   @ApiResponse({ status: 404, description: '알림을 찾을 수 없습니다.' })
-  async cancelNotification(@Req() req, @Param('id') id: string) {
-    const userId = req.user.userId;
-    return this.notificationService.cancelNotification(Number(id), userId);
+  async cancelNotification(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+  ) {
+    return this.notificationService.cancelNotification(Number(id), user.id);
   }
 
   @Get()
@@ -68,8 +69,7 @@ export class NotificationsController {
     status: 200,
     description: '내 예약된 알림 리스트 반환',
   })
-  async findAllNotifications(@Req() req: any) {
-    const userId = req.user.userId;
-    return this.notificationService.findAllNotifications(userId);
+  async findAllNotifications(@CurrentUser() user: User) {
+    return this.notificationService.findAllNotifications(user.id);
   }
 }

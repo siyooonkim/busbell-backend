@@ -33,7 +33,7 @@ export class BusApiController {
     description: '노선의 시작-종료 정류장, 배차 간격, 운행 여부를 반환',
   })
   async getOverview(@Query() dto: GetBusInfoDto) {
-    return this.busApiService.getOverview(dto.routeId);
+    return this.busApiService.getOverview(dto.routeId, dto.cityCode);
   }
 
   // ✅ 실시간 차량 위치 조회
