@@ -9,7 +9,6 @@ import { NotificationsModule } from './notifications/modules/notification.module
 import { ScheduleModule } from '@nestjs/schedule';
 import { AuthModule } from './auth/modules/auth.module';
 import { CacheModule } from '@nestjs/cache-manager';
-import { redisStore } from 'cache-manager-redis-yet';
 
 @Module({
   imports: [
@@ -27,14 +26,7 @@ import { redisStore } from 'cache-manager-redis-yet';
         autoLoadEntities: true,
       }),
     }),
-    CacheModule.registerAsync({
-      isGlobal: true,
-      useFactory: () => ({
-        store: redisStore as any,
-        url: process.env.REDIS_URL, // 예: redis://localhost:6379
-        ttl: 0, // 기본 TTL 없음(서비스별로 지정)
-      }),
-    }),
+    CacheModule.register({ isGlobal: true, ttl: 0 }),
     ScheduleModule.forRoot(),
     AuthModule,
     UsersModule,
