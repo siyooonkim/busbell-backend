@@ -4,6 +4,7 @@ import {
   MinLength,
   MaxLength,
   Matches,
+  IsOptional,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -34,4 +35,13 @@ export class SignupDto {
   @MinLength(2, { message: '닉네임은 최소 2자 이상이어야 합니다' })
   @MaxLength(20, { message: '닉네임은 최대 20자까지 가능합니다' })
   nickname: string;
+
+  @ApiProperty({
+    example: 'fcm_token_from_firebase',
+    description: 'FCM 토큰 (선택)',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  fcmToken?: string;
 }

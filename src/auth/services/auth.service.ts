@@ -48,10 +48,13 @@ export class AuthService {
 
     await this.userRepo.save(user);
 
-    // 4. 토큰 생성 (deviceId 미포함 - signup은 device 정보 없음)
+    // 4. 토큰 생성
     const tokens = await this.generateTokens(user.id, user.email);
 
-    // 5. 응답
+    // 5. Auth 세션 저장 (FCM 토큰 포함)
+    await this.saveAuthSession(user.id, tokens.refreshToken, dto.fcmToken);
+
+    // 6. 응답
     return {
       user: {
         id: user.id,
