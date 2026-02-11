@@ -24,6 +24,7 @@ import { CacheModule } from '@nestjs/cache-manager';
         database: cfg.get('DB_NAME'),
         logging: true,
         autoLoadEntities: true,
+        synchronize: true,
       }),
     }),
     CacheModule.register({ isGlobal: true, ttl: 0 }),
